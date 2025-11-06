@@ -129,3 +129,48 @@ p {
   background-color: #f7f7f7;
   border-color: #333;
 }
+
+/* (追加) 結果表示エリアのスタイル */
+.result-area {
+  width: 90%;
+  max-width: 320px;
+  margin-top: 30px;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background-color: #f9f9f9;
+
+  /* デフォルトでは非表示にしておく */
+  display: none;
+}
+
+.result-area h3 {
+  font-size: 1.1rem;
+  color: #333;
+  margin-top: 0;
+}
+
+.suggestion-list {
+  list-style: none; /* 黒丸を消す */
+  padding-left: 0;
+  text-align: left;
+}
+
+.suggestion-list li {
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.suggestion-list li:last-child {
+  border-bottom: none;
+}
+
+/* (追加) 読み込み中・エラーのスタイル */
+.loading {
+  color: #555;
+}
+
+.error {
+  color: #d9534f; /* エラー赤色 */
+  font-weight: bold;
+}

@@ -1,36 +1,40 @@
 const balanceInput = document.getElementById("balanceInput");
 const confirmButton = document.getElementById("confirmButton");
-
+const resultArea = document.getElementById("resultArea");
 // 「確定」ボタンがクリックされた時の処理
 confirmButton.addEventListener("click", async () => {
-  // 1. 入力欄から値を取得
   const remainingBalance = balanceInput.value;
 
-  // (バリデーション) もし入力が空なら、処理を中断
   if (!remainingBalance) {
-    alert("残高を入力してください。"); // alertの代わりに、画面にメッセージを出すのが望ましいです
+    alert("残高を入力してください。");
     return;
   }
 
-  // 2. APIのURLを構築
-  // (例: remainingBalanceが 350 なら、URLは "/api/propose?remaining=350" となる)
   const apiUrl = `/api/propose?remaining=${remainingBalance}`;
-
+  resultArea.innerHTML = '<p class="loading">提案を検索中...</p>';
+  resultArea.style.display = "block"; // エリアを表示
   try {
-    // 3. APIにリクエストを送信 (fetch)
     const response = await fetch(apiUrl);
 
-    // 4. APIから返ってきたJSONデータを取得
     const suggestion = await response.json();
+    const itemsHtml = suggestion.suggestion
+      .map((item) => {
+        return `<li>${item.name} (${item.price}円)</li>`;
+      })
+      .join(""); // join('') で配列を一つの文字列にします
 
-    // 5. 結果をコンソールに表示 (動作確認用)
+    // 結果エリアに表示するHTMLを構築
+    resultArea.innerHTML = `
+            <h3>おすすめの組み合わせ (合計: ${suggestion.total}円)</h3>
+            <ul class="suggestion-list">
+                ${itemsHtml}
+            </ul>
+            <p>（あなたの残高: ${suggestion.remaining}円）</p>
+        `;
     console.log("APIからの提案:", suggestion);
-
-    // TODO: ここで suggestion の内容をHTMLに反映させる
-    // (例: alert(`提案: ${suggestion.suggestion[0].name}`));
   } catch (error) {
     // エラーハンドリング
     console.error("APIリクエスト中にエラーが発生しました:", error);
-    alert("提案の取得に失敗しました。");
+    resultArea.innerHTML = '<p class="error">提案の取得に失敗しました。</p>';
   }
 });
