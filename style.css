@@ -1,0 +1,131 @@
+/* 基本設定 */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Hiragino Sans", "Noto Sans CJK JP", sans-serif;
+  background-color: #ffffff;
+  color: #333;
+}
+
+/* 全体を画面の中央に配置するためのコンテナ */
+.container {
+  display: flex;
+  flex-direction: column; /* 要素を縦に並べる */
+  justify-content: center; /* 垂直方向の中央揃え */
+  align-items: center; /* 水平方向の中央揃え */
+  text-align: center;
+  min-height: 80vh; /* 画面の高さいっぱいに広げる */
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* アプリタイトル */
+h1 {
+  font-weight: 500;
+  font-size: 2rem;
+  margin-bottom: 10px;
+}
+
+/* 説明テキスト */
+p {
+  font-size: 1rem;
+  margin-bottom: 30px;
+}
+
+/* (追加) 入力欄と「円」をまとめるコンテナ */
+.input-container {
+  position: relative;
+  width: 80%;
+  max-width: 280px;
+}
+
+/* 残高入力フィールド (画像のデザインを再現) */
+.balance-input {
+  width: 100%; /* (変更) 親コンテナいっぱいに広げる */
+  max-width: 280px;
+  /* (変更) 「円」のスペースを確保するために右側のパディングを増やす */
+  padding: 20px 40px 20px 20px;
+  font-size: 1.1rem;
+  text-align: center;
+
+  border: 2px solid #ccc;
+  border-radius: 30px; /* 角を丸くする */
+
+  /* 影をつけて立体感を出す */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+
+  /* ブラウザ標準のスタイルをリセット */
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+/* 入力欄にフォーカスが当たった時のスタイル */
+.balance-input:focus {
+  outline: none;
+  border-color: #007aff; /* 少し色を変える */
+  box-shadow: 0 4px 10px rgba(0, 122, 255, 0.2);
+}
+
+/* 入力欄のプレースホルダー（薄い文字）のスタイル */
+.balance-input::placeholder {
+  color: #aaa;
+}
+
+/* (補足) 数値入力欄の上下矢印を非表示にする */
+.balance-input::-webkit-outer-spin-button,
+.balance-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.balance-input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* (追加) 「円」の単位を表示するスタイル */
+.currency-unit {
+  position: absolute;
+  top: 50%;
+  right: 20px; /* 入力欄の右端からの位置 */
+  transform: translateY(-50%); /* 上下中央揃え */
+
+  font-size: 1.1rem;
+  color: #555; /* テキストより少し薄い色 */
+
+  /* デフォルトでは非表示 */
+  display: none;
+
+  /* ユーザーがテキストを選択できないようにする */
+  pointer-events: none;
+}
+
+/* (追加) 入力欄に何か入力された時（placeholderが消えた時）だけ、「円」を表示 */
+.balance-input:not(:placeholder-shown) + .currency-unit {
+  display: block;
+}
+
+/* 確定ボタン (画像の装飾的な枠線を再現) */
+.confirm-button {
+  margin-top: 40px; /* 入力欄との間隔を空ける */
+  padding: 12px 30px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #444;
+  background-color: #fff;
+
+  /* 二重線で装飾的な枠線を表現 */
+  border: 4px double #999;
+
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+/* ボタンにマウスを乗せた時のスタイル */
+.confirm-button:hover {
+  background-color: #f7f7f7;
+  border-color: #333;
+}

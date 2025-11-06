@@ -1,9 +1,5 @@
-// Vercelが自動的にNode.jsサーバーレス関数として扱います。
-
-// Vercelはデフォルトで (req, res) を受け取る関数を期待します
+// Vercelはデフォルトで (req, res) を受け取る関数
 export default function handler(req, res) {
-  // PythonのFlaskコードにあったロジックを再現します
-
   // GETリクエスト以外はエラーを返す (もしGET専用にする場合)
   if (req.method !== "GET") {
     res.setHeader("Allow", ["GET"]);
@@ -11,11 +7,9 @@ export default function handler(req, res) {
   }
 
   // クエリパラメータから残額を取得
-  // (例: .../api/propose?remaining=350)
-  // Pythonの request.args.get('remaining', default=0, type=int) とほぼ同等です
+
   const remaining_balance = parseInt(req.query.remaining || "0", 10);
 
-  // ダミーの提案データ
   const suggestion = {
     remaining: remaining_balance,
     suggestion: [

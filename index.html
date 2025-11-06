@@ -3,11 +3,35 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ミールパス・スキャンレジ (MVP)</title>
+    <title>Meal Pass App</title>
+    <!-- CSSファイルを読み込みます -->
+    <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <h1>ミールパス・スキャンレジ</h1>
-    <p>ここでバーコードをスキャンします。</p>
+    <!-- 全体を中央揃えにするためのコンテナ -->
+    <div class="container">
+      <h1>Meal Pass App</h1>
+
+      <p>ミールパスの残高を入力してください</p>
+
+      <!-- (変更) 入力欄と単位をコンテナで囲む -->
+      <div class="input-container">
+        <!-- 残高を入力する input フィールド -->
+        <input
+          type="number"
+          id="balanceInput"
+          class="balance-input"
+          placeholder="残高を入力"
+        />
+        <!-- (追加) 「円」の単位 -->
+        <span class="currency-unit">円</span>
+      </div>
+
+      <!-- 確定ボタン -->
+      <button id="confirmButton" class="confirm-button">確定</button>
+    </div>
+
+    <!-- JavaScriptファイルを読み込みます -->
     <script src="app.js"></script>
   </body>
 </html>
