@@ -9,6 +9,9 @@ body {
   color: #333;
 }
 
+/* --- index.html (残高入力ページ) 用のスタイル --- 
+*/
+
 /* 全体を画面の中央に配置するためのコンテナ */
 .container {
   display: flex;
@@ -173,4 +176,109 @@ p {
 .error {
   color: #d9534f; /* エラー赤色 */
   font-weight: bold;
+}
+
+/* --- ここから admin.html (商品管理ページ) 用のスタイル --- 
+*/
+
+.admin-container {
+  width: 90%;
+  max-width: 600px;
+  margin: 20px auto;
+  padding: 20px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  text-align: left; /* adminページは全体を左揃えに */
+}
+
+.admin-container h1 {
+  text-align: left;
+}
+
+.form-container {
+  margin-bottom: 30px;
+  padding: 20px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  background: #fdfdfd;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 600;
+  color: #333;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 10px;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  box-sizing: border-box; /* パディングを含めて幅100%にする */
+}
+
+#addButton {
+  padding: 10px 20px;
+  font-size: 1rem;
+  color: #fff;
+  background-color: #007bff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+#addButton:hover {
+  background-color: #0056b3;
+}
+
+#productList h2 {
+  border-bottom: 2px solid #eee;
+  padding-bottom: 10px;
+}
+
+/* ▼▼▼ 表（テーブル）用のスタイル ▼▼▼ */
+
+/* 新しいテーブル用のスタイル */
+#itemsTable {
+  width: 100%;
+  border-collapse: collapse; /* セルの境界線を結合 */
+  margin-top: 15px;
+}
+
+#itemsTable th,
+#itemsTable td {
+  border: 1px solid #ddd; /* 罫線 */
+  padding: 10px;
+  text-align: left;
+  vertical-align: middle; /* 上下中央揃え */
+}
+
+#itemsTable th {
+  background-color: #f8f8f8; /* ヘッダーの背景色 */
+  font-weight: 600;
+}
+
+/* テーブル内の削除ボタンのスタイル */
+#itemsTable .delete-button {
+  padding: 5px 10px;
+  font-size: 0.9rem;
+  color: #d9534f;
+  background-color: transparent;
+  border: 1px solid #d9534f;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+#itemsTable .delete-button:hover {
+  background-color: #d9534f;
+  color: #fff;
 }

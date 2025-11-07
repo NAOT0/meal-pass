@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Meal Pass 管理画面</title>
+    <!-- style.css を読み込み -->
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- 
+      (修正) 
+      CSS(style.css)とクラス名を合わせるため、
+      id="container" -> class="admin-container" に変更
+    -->
+    <div class="admin-container">
+      <h1>Meal Pass 商品管理</h1>
+
+      <!-- 商品追加フォーム -->
+      <!-- 
+        (修正)
+        CSS(style.css)とクラス名を合わせるため、
+        div class="card" -> div class="form-container" に変更
+      -->
+      <div class="form-container">
+        <h2>新しい商品を追加</h2>
+
+        <!-- (修正) フォームの各項目を form-group で囲う -->
+        <div class="form-group">
+          <label for="itemJan">JANコード</label>
+          <input type="text" id="itemJan" placeholder="例: 4901234567890" />
+        </div>
+        <div class="form-group">
+          <label for="itemName">商品名</label>
+          <input type="text" id="itemName" placeholder="例: おにぎり" />
+        </div>
+        <div class="form-group">
+          <label for="itemPrice">価格 (円)</label>
+          <input type="number" id="itemPrice" placeholder="例: 140" />
+        </div>
+
+        <!-- (修正) ボタンの <br> を削除 (CSSでマージンを調整するため) -->
+        <button id="addButton">追加</button>
+      </div>
+
+      <!-- ▼▼▼ ここが最重要修正点 ▼▼▼ -->
+      <!-- 商品一覧 -->
+      <div id="productList">
+        <h2>登録済み商品一覧</h2>
+
+        <!-- 
+          (修正) 骨組みを <ul> から <table> に変更
+          ID (id="itemsTable") は style.css でスタイルを当てるために使用
+        -->
+        <table id="itemsTable">
+          <!-- 表のヘッダー（見出し） -->
+          <thead>
+            <tr>
+              <th>JANコード</th>
+              <th>商品名</th>
+              <th>価格 (円)</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+
+          <!-- 
+            (重要) admin.js が <tr> を挿入する場所
+            IDを <tbody id="itemsListContainer"> に設定
+          -->
+          <tbody id="itemsListContainer">
+            <!-- ここに admin.js が商品リストを挿入します -->
+          </tbody>
+        </table>
+      </div>
+      <!-- ▲▲▲ ここまでが修正点 ▲▲▲ -->
+    </div>
+
+    <!-- 
+      (削除) 
+      Firebaseのロジックは admin.js に完全に移行したため、
+      HTML内の <script type="module">...</script> (window.firebase) は不要です。
+    -->
+
+    <!-- 実際のロジックを admin.js から読み込みます -->
+    <script src="admin.js" type="module"></script>
+  </body>
+</html>
