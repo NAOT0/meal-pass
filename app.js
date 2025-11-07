@@ -5,15 +5,14 @@ const resultArea = document.getElementById("resultArea");
 confirmButton.addEventListener("click", async () => {
   const remainingBalance = balanceInput.value;
 
-  if (!remainingBalance) {
-    alert("残高を入力してください。");
-    return;
-  }
-
   const apiUrl = `/api/propose?remaining=${remainingBalance}`;
   resultArea.innerHTML = '<p class="loading">提案を検索中...</p>';
   resultArea.style.display = "block"; // エリアを表示
   try {
+    if (!remainingBalance) {
+      resultArea.innerHTML = '<p class="error">残高を入力してください</p>';
+      return;
+    }
     const response = await fetch(apiUrl);
 
     const suggestion = await response.json();
@@ -21,7 +20,7 @@ confirmButton.addEventListener("click", async () => {
       .map((item) => {
         return `<li>${item.name} (${item.price}円)</li>`;
       })
-      .join(""); // join('') で配列を一つの文字列にします
+      .join(""); // join('') で配列を一つの文字列に
 
     // 結果エリアに表示するHTMLを構築
     resultArea.innerHTML = `
@@ -29,7 +28,9 @@ confirmButton.addEventListener("click", async () => {
             <ul class="suggestion-list">
                 ${itemsHtml}
             </ul>
-            <p>（あなたの残高: ${suggestion.remaining}円）</p>
+            <p>（購入後の残高: ${
+              suggestion.remaining - suggestion.total
+            }円）</p>
         `;
     console.log("APIからの提案:", suggestion);
   } catch (error) {
