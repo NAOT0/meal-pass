@@ -10,14 +10,28 @@ export default function handler(req, res) {
 
   const remaining_balance = parseInt(req.query.remaining || "0", 10);
 
-  const suggestion = {
-    remaining: remaining_balance,
-    suggestion: [
-      { name: "おにぎり", price: 140 },
-      { name: "お茶", price: 160 },
-    ],
-    total: 300,
-  };
+  const filter = req.query.filter;
+
+  let suggestion = {};
+
+  if (filter === "onigiri") {
+    suggestion = {
+      remaining: remaining_balance,
+      suggestion: [
+        { name: "サンドイッチ", price: 280 },
+        { name: "おにぎり", price: 140 },
+        { name: "お茶", price: 160 },
+      ],
+      total: 580,
+    };
+  } else {
+    // 通常モードのロジック (既存のダミーデータ)
+    suggestion = {
+      remaining: remaining_balance,
+      suggestion: [{ name: "お茶", price: 160 }],
+      total: 300,
+    };
+  }
 
   // JSON形式で結果を返す
   // ステータス200（OK）でJSONを送信します

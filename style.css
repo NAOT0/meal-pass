@@ -282,3 +282,20 @@ p {
   background-color: #d9534f;
   color: #fff;
 }
+
+.checkbox-container {
+  /* 入力欄 (input-container) とレイアウトを合わせる */
+  width: 80%;
+  max-width: 280px;
+
+  margin-top: 20px; /* 上の要素との間隔 */
+  text-align: left; /* ラベルを左揃えにするため */
+
+  /* (補足) admin.html用の .form-group とスタイルが重複しないよう、
+     index.html 用に .checkbox-container という別のクラス名を使用しています。 */
+}
+
+/* チェックボックス本体とラベルの間隔 */
+.checkbox-container input {
+  margin-right: 5px;
+}

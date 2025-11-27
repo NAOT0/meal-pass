@@ -1,11 +1,20 @@
 const balanceInput = document.getElementById("balanceInput");
 const confirmButton = document.getElementById("confirmButton");
 const resultArea = document.getElementById("resultArea");
+const soldOutCheckbox = document.getElementById("soldOutCheckbox");
 // 「確定」ボタンがクリックされた時の処理
 confirmButton.addEventListener("click", async () => {
   const remainingBalance = balanceInput.value;
+  const isOnigiri = onigiriCheckbox.checked;
 
-  const apiUrl = `/api/propose?remaining=${remainingBalance}`;
+  let apiUrl;
+  if (isOnigiri) {
+    // チェックが入っている場合、「filter=sold_out」というパラメータを追加
+    apiUrl = `/api/propose?remaining=${remainingBalance}&filter=onigiri`;
+  } else {
+    // チェックが入っていない場合 (既存)
+    apiUrl = `/api/propose?remaining=${remainingBalance}`;
+  }
   resultArea.innerHTML = '<p class="loading">提案を検索中...</p>';
   resultArea.style.display = "block"; // エリアを表示
   try {
