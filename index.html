@@ -15,6 +15,7 @@
     <div class="container">
       <h1>Meal Pass App</h1>
 
+      <!-- 1. フィルタ (市販弁当なし) -->
       <div class="filter-section">
         <div class="filter-title">
           <i class="fas fa-sliders-h"></i> カテゴリ設定
@@ -47,6 +48,7 @@
         </div>
       </div>
 
+      <!-- 2. 入力欄 + 検索ボタン -->
       <div class="input-group">
         <span class="input-label">残高:</span>
         <input
@@ -60,15 +62,28 @@
         </button>
       </div>
 
+      <!-- 3. リセットボタン -->
       <div class="reset-link-container">
         <button id="resetExcludedButton">
           <i class="fas fa-undo"></i> 除外をリセット
         </button>
       </div>
 
+      <!-- 4. 結果 -->
       <div id="resultArea" class="result-area"></div>
+      <footer
+        style="
+          margin-top: 40px;
+          color: #aaa;
+          font-size: 0.8rem;
+          text-align: center;
+        "
+      >
+        @naoto
+      </footer>
     </div>
 
+    <!-- モジュールとして読み込み -->
     <script type="module" src="app.js"></script>
   </body>
 </html>

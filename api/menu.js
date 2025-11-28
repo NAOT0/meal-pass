@@ -18,7 +18,7 @@ export default async function handler(req, res) {
   // 1時間キャッシュ、裏で更新(24時間)
   res.setHeader(
     "Cache-Control",
-    "public, s-maxage=3600, stale-while-revalidate=86400"
+    "public, s-maxage=86400, stale-while-revalidate=86400"
   );
 
   try {
