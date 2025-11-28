@@ -83,7 +83,12 @@ export function renderResults(
             `;
     }
 
-    // 詳細エリアHTML生成
+    const isOpen = openGroupIds.has(group.id);
+    const detailsStyle = isOpen ? "max-height:5000px;" : "max-height:0;";
+    const detailsClass = isOpen ? "open" : "";
+    const iconTransform = isOpen ? "rotate(180deg)" : "rotate(0deg)";
+
+    // --- 詳細エリア (下段) HTML生成 ---
     let itemsHtml = "";
     if (group.priority === 11 || group.type === "ONIGIRI") {
       let message = "店頭でご確認ください。";
@@ -129,16 +134,11 @@ export function renderResults(
                 </div>`;
     }
 
-    const isOpen = openGroupIds.has(group.id);
-    const detailsStyle = isOpen ? "max-height:5000px;" : "max-height:0;";
-    const detailsClass = isOpen ? "open" : "";
-    const iconTransform = isOpen ? "rotate(180deg)" : "rotate(0deg)";
-
-    // メインコンテンツのレイアウト切り替え
+    // --- メインコンテンツ (上段・左側) HTML生成 ---
     let mainContentHtml = "";
 
     if (group.type === "ONIGIRI") {
-      // ★おにぎり（2行表示）
+      // おにぎりの場合は2行構成 (名前 + カウンタ)
       mainContentHtml = `
                 <div class="item-header-container-col">
                     <div class="item-header-row-primary">
@@ -154,7 +154,7 @@ export function renderResults(
                 </div>
             `;
     } else {
-      // ★通常商品（1行表示）
+      // 通常商品
       mainContentHtml = `
                 <div class="item-header-container-row">
                     <div class="item-info-group">
@@ -162,45 +162,45 @@ export function renderResults(
                         <span class="item-name">${displayName}</span>
                         ${coopBadge}
                     </div>
-                    <div class="item-counter-group">
-                        ${externalCounterHtml}
-                    </div>
                 </div>
             `;
     }
 
+    // --- アクションボタン (上段・右側) HTML生成 ---
+    // ※ ここを一つのブロックとして定義します
+    const actionButtonsHtml = `
+            <div class="item-actions">
+                <span class="item-price">${priceDisplay}</span>
+                <button class="btn-circle btn-lock ${lockBtnStateClass}" onclick="event.stopPropagation(); window.toggleGroupLock('${group.id}')">
+                    <i class="fas ${lockIconClass}"></i>
+                </button>
+                <button class="btn-circle btn-remove" onclick="event.stopPropagation(); window.removeSlot('${group.id}')">
+                    <i class="fas fa-times"></i>
+                </button>
+                <i id="icon-${group.id}" class="fas fa-chevron-down" style="font-size:0.8rem; color:#aaa; transition:transform 0.2s; margin-left:4px; transform: ${iconTransform};"></i>
+            </div>
+    `;
+
+    // --- 全体の組み立て ---
+    // <li> の中に 上段(header) と 下段(details) を並べる構造に変更
     html += `
             <li style="${isLockedAny ? "background-color:#fff8e1;" : ""}">
-                <div class="item-main-content">
-                    <div style="cursor:pointer;" onclick="window.toggleDetails('${
-                      group.id
-                    }')">
+                
+                <div class="item-top-row" onclick="window.toggleDetails('${
+                  group.id
+                }')">
+                    <div class="item-info-area">
                         ${mainContentHtml}
                     </div>
-                    
-                    <div id="details-${
-                      group.id
-                    }" class="details-container ${detailsClass}" style="${detailsStyle}">
-                        ${itemsHtml}
-                    </div>
+                    ${actionButtonsHtml}
                 </div>
                 
-                <div class="item-actions">
-                    <span class="item-price">${priceDisplay}</span>
-                    <button class="btn-circle btn-lock ${lockBtnStateClass}" onclick="window.toggleGroupLock('${
-      group.id
-    }')">
-                        <i class="fas ${lockIconClass}"></i>
-                    </button>
-                    <button class="btn-circle btn-remove" onclick="window.removeSlot('${
-                      group.id
-                    }')">
-                        <i class="fas fa-times"></i>
-                    </button>
-                    <i id="icon-${
-                      group.id
-                    }" class="fas fa-chevron-down" style="font-size:0.8rem; color:#aaa; transition:transform 0.2s; margin-left:4px; transform: ${iconTransform};"></i>
+                <div id="details-${
+                  group.id
+                }" class="details-container ${detailsClass}" style="${detailsStyle}">
+                    ${itemsHtml}
                 </div>
+
             </li>
         `;
   });

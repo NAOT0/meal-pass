@@ -184,27 +184,49 @@ h1 {
   text-align: left;
 }
 
+/* ▼▼▼ ここから下が大幅な変更点です ▼▼▼ */
+
+/* リストアイテム全体の設定 (FlexではなくBlockにする) */
 .suggestion-list li {
-  padding: 12px 16px;
+  padding: 0; /* 内側のパディングは子要素で管理 */
   border-bottom: 1px solid #eee;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  display: block; /* Flex解除: 縦積みにする */
   width: 100%;
+  background-color: #fff;
 }
 .suggestion-list li:last-child {
   border-bottom: none;
 }
 
-/* --- アイテム表示レイアウト (メインカード) --- */
-
-.item-main-content {
-  flex: 1;
-  min-width: 0;
+/* --- 上段: ヘッダー行 (クリックで開閉) --- */
+.item-top-row {
+  display: flex;
+  justify-content: space-between; /* 左の情報と右のアクションを離す */
+  align-items: center; /* 垂直方向中央揃え */
+  padding: 12px 16px;
+  cursor: pointer;
   width: 100%;
+  min-height: 50px;
 }
 
-/* === 共通パーツ (ヘッダー内の左右分割) === */
+/* 左側の情報エリア (名前やアイコン) */
+.item-info-area {
+  flex: 1; /* 余ったスペースを埋める */
+  min-width: 0; /* 文字省略のために必要 */
+  display: flex;
+  align-items: center;
+  margin-right: 8px;
+}
+
+/* 右側のアクションエリア (価格・ボタン) */
+.item-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0; /* 縮まないようにする */
+}
+
+/* === 共通パーツ === */
 .item-info-group {
   display: flex;
   align-items: center;
@@ -248,70 +270,71 @@ h1 {
 .item-header-container-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   width: 100%;
-  min-height: 36px;
 }
 
 /* === パターンB: おにぎり (2行・縦積み) === */
+/* ヘッダーの中でのレイアウト調整 */
 .item-header-container-col {
   display: flex;
   flex-direction: column;
   justify-content: center;
   width: 100%;
-  padding: 4px 0;
 }
 .item-header-row-primary {
   display: flex;
   align-items: center;
-  justify-content: space-between; /* カウンタを右端に配置するため */
   width: 100%;
-  margin-bottom: 6px;
 }
 
-/* 2行目 (カウンタを右寄せで配置) */
+/* 2行目 (カウンタ) */
 .item-header-row-secondary {
   display: flex;
   width: 100%;
-  justify-content: flex-end;
+  justify-content: flex-start; /* 左寄せに変更 */
+  margin-top: 4px;
+  padding-left: 28px; /* アイコン分ずらす */
 }
 
-/* 詳細エリア (アコーディオン) */
+/* --- 下段: 詳細エリア (アコーディオン) --- */
 .details-container {
   overflow: hidden;
   transition: max-height 0.3s ease-out;
-  margin-top: 5px;
-  padding-left: 0;
   width: 100%;
+  background-color: #f7f9fc; /* 少し色を変えて区別 */
+  border-top: 1px dashed #eee;
+}
+
+.details-container.open {
+  /* ボーダーなどを調整する場合はここに */
 }
 
 .details-message {
   width: 100%;
-  padding: 12px;
-  margin-top: 8px;
+  padding: 12px 16px;
   font-size: 0.85rem;
   color: #666;
-  background: #f9f9f9;
-  border-radius: 4px;
-  text-align: center;
-  box-sizing: border-box;
+  text-align: left;
 }
 
-/* ★★★ 詳細リスト行 (横幅フル活用) ★★★ */
+/* 詳細リスト行 (横幅フル活用) */
 .details-item-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: space-between; /* 名前とカウンタを両端に */
   width: 100%;
-  padding: 10px 0;
-  border-bottom: 1px dashed #eee;
+  padding: 10px 20px; /* 横幅いっぱい使うのでパディング調整 */
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   box-sizing: border-box;
+}
+.details-item-row:last-child {
+  border-bottom: none;
 }
 
 .details-item-name {
   flex: 1;
   min-width: 0;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -327,9 +350,9 @@ h1 {
 }
 
 .details-reset-container {
-  text-align: right;
-  padding-top: 8px;
-  width: 100%;
+  text-align: center;
+  padding: 10px;
+  background-color: #f7f9fc;
 }
 .details-reset-btn {
   font-size: 0.8rem;
@@ -340,16 +363,6 @@ h1 {
   cursor: pointer;
 }
 
-/* 右側アクションエリア */
-.item-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  align-self: flex-start;
-  margin-top: 4px;
-  margin-left: 12px;
-  flex-shrink: 0;
-}
 .item-price {
   font-weight: 700;
   background: #f0f2f5;
@@ -359,7 +372,7 @@ h1 {
   white-space: nowrap;
 }
 
-/* ボタン・カウンターのスタイルは維持 */
+/* ボタン・カウンターのスタイル */
 .btn-circle {
   background: none;
   border: 1px solid #ddd;
