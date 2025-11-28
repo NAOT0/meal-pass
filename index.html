@@ -1,47 +1,74 @@
 <!DOCTYPE html>
 <html lang="ja">
   <head>
+    <script src="/_vercel/insights/script.js" defer></script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Meal Pass App</title>
-    <!-- CSSファイルを読み込みます -->
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <!-- 全体を中央揃えにするためのコンテナ -->
     <div class="container">
       <h1>Meal Pass App</h1>
 
-      <p>ミールパスの残高を入力してください</p>
+      <div class="filter-section">
+        <div class="filter-title">
+          <i class="fas fa-sliders-h"></i> カテゴリ設定
+        </div>
+        <div class="filter-grid">
+          <label class="filter-checkbox"
+            ><input type="checkbox" id="filter-bento" checked /> 🍱
+            内製弁当</label
+          >
+          <label class="filter-checkbox"
+            ><input type="checkbox" id="filter-onigiri" checked /> 🍙
+            おにぎり</label
+          >
+          <label class="filter-checkbox"
+            ><input type="checkbox" id="filter-bread" checked /> 🍞
+            パン類</label
+          >
+          <label class="filter-checkbox"
+            ><input type="checkbox" id="filter-cupmen" checked /> 🍜
+            カップ麺</label
+          >
+          <label class="filter-checkbox"
+            ><input type="checkbox" id="filter-drink" checked /> 🥤
+            飲み物</label
+          >
+          <label class="filter-checkbox"
+            ><input type="checkbox" id="filter-salad" checked /> 🥗
+            サラダ</label
+          >
+        </div>
+      </div>
 
-      <!-- (変更) 入力欄と単位をコンテナで囲む -->
-      <div class="input-container">
-        <!-- 残高を入力する input フィールド -->
+      <div class="input-group">
+        <span class="input-label">残高:</span>
         <input
           type="number"
           id="balanceInput"
-          class="balance-input"
-          placeholder="残高を入力"
+          class="input-field"
+          placeholder="例: 550"
         />
-        <!-- (追加) 「円」の単位 -->
-        <span class="currency-unit">円</span>
+        <button id="searchBtn" class="btn-icon">
+          <i class="fas fa-search"></i>
+        </button>
       </div>
 
-      <div class="input-container"></div>
-
-      <div class="checkbox-container">
-        <input type="checkbox" id="onigiriCheckbox" checked="checked" />
-        <label for="onigiriCheckbox">おにぎり</label>
+      <div class="reset-link-container">
+        <button id="resetExcludedButton">
+          <i class="fas fa-undo"></i> 除外をリセット
+        </button>
       </div>
 
-      <!-- 確定ボタン -->
-      <button id="confirmButton" class="confirm-button">確定</button>
-      <div id="resultArea" class="result-area">
-        <!-- JavaScriptによって、ここに結果が挿入されます -->
-      </div>
+      <div id="resultArea" class="result-area"></div>
     </div>
 
-    <!-- JavaScriptファイルを読み込みます -->
-    <script src="app.js"></script>
+    <script type="module" src="app.js"></script>
   </body>
 </html>

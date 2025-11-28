@@ -5,12 +5,60 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Meal Pass 管理画面</title>
     <link rel="stylesheet" href="style.css" />
+    <style>
+      /* CSVアップロードエリア用の追加スタイル */
+      .csv-upload-area {
+        border: 2px dashed #005ca2;
+        background-color: #f0f7ff;
+        margin-bottom: 30px;
+      }
+      .csv-upload-area h2 {
+        color: #005ca2;
+        border-bottom-color: #cce0ff;
+      }
+      .status-msg {
+        margin-top: 15px;
+        padding: 10px;
+        border-radius: 5px;
+        font-weight: bold;
+        display: none; /* デフォルト非表示 */
+      }
+      .note-text {
+        font-size: 0.85rem;
+        color: #666;
+        margin-bottom: 15px;
+      }
+    </style>
   </head>
   <body>
     <div class="admin-container">
-      <h1>Meal Pass 商品管理</h1>
+      <h1>Meal Pass 商品データ管理</h1>
+
+      <div class="form-container csv-upload-area">
+        <h2>📦 CSVファイルから一括登録</h2>
+        <p class="note-text">
+          POSデータなどのCSVファイルを選択してアップロードしてください。<br />
+          自動的に解析・グループ化を行い、データベースを更新します。
+        </p>
+
+        <div class="form-group">
+          <label for="csvFileInput">CSVファイルを選択</label>
+          <input type="file" id="csvFileInput" accept=".csv" />
+        </div>
+
+        <button id="csvUploadButton" style="background-color: #005ca2">
+          CSVを読み込んで更新
+        </button>
+
+        <div id="uploadStatus" class="status-msg"></div>
+      </div>
+
       <div class="form-container">
-        <h2>新しい商品を追加</h2>
+        <h2>手動で商品を追加</h2>
+        <p class="note-text" style="color: #d9534f">
+          ※現在はデータ構造変更のため、上記CSVによる一括登録を推奨しています。<br />
+          ここから追加した場合、グループ化ロジックが適用されない場合があります。
+        </p>
 
         <div class="form-group">
           <label for="itemJan">JANコード</label>
@@ -25,40 +73,28 @@
           <input type="number" id="itemPrice" placeholder="例: 140" />
         </div>
 
-        <!-- (修正) ボタンの <br> を削除 (CSSでマージンを調整するため) -->
-        <button id="addButton">追加</button>
+        <button id="addButton">リストに追加</button>
       </div>
 
-      <!-- ▼▼▼ ここが最重要修正点 ▼▼▼ -->
-      <!-- 商品一覧 -->
       <div id="productList">
-        <h2>登録済み商品一覧</h2>
+        <h2>登録済みグループ一覧 (menu_groups)</h2>
 
-        <!-- 
-          (修正) 骨組みを <ul> から <table> に変更
-          ID (id="itemsTable") は style.css でスタイルを当てるために使用
-        -->
         <table id="itemsTable">
-          <!-- 表のヘッダー（見出し） -->
           <thead>
             <tr>
-              <th>JANコード</th>
-              <th>商品名</th>
-              <th>価格 (円)</th>
-              <th>操作</th>
+              <th>グループID</th>
+              <th>カテゴリ表示名</th>
+              <th>価格</th>
+              <th>優先度</th>
+              <th>商品数</th>
             </tr>
           </thead>
 
-          <!-- 
-            (重要) admin.js が <tr> を挿入する場所
-            IDを <tbody id="itemsListContainer"> に設定
-          -->
           <tbody id="itemsListContainer"></tbody>
         </table>
       </div>
     </div>
 
-    <!-- 実際のロジックを admin.js から読み込みます -->
     <script src="admin.js" type="module"></script>
   </body>
 </html>

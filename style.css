@@ -1,186 +1,297 @@
-/* 基本設定 */
+/* --- 変数定義 --- */
+:root {
+  --color-primary: #005ca2;
+  --color-primary-hover: #00457a;
+  --color-text-main: #1a1a1c;
+  --color-text-sub: #546471;
+  --color-bg-body: #f5f7f9;
+  --color-bg-surface: #ffffff;
+  --color-border: #d0d5d9;
+  --color-border-focus: #005ca2;
+  --color-error: #c91223;
+  --radius-base: 8px;
+  --radius-sm: 4px;
+}
+
+/* --- 基本設定 --- */
+* {
+  box-sizing: border-box;
+}
+
 html,
 body {
-  height: 100%;
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Hiragino Sans", "Noto Sans CJK JP", sans-serif;
-  background-color: #ffffff;
-  color: #333;
+  padding: 0;
+  font-family: "Noto Sans JP", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, sans-serif;
+  background-color: var(--color-bg-body);
+  color: var(--color-text-main);
+  line-height: 1.6;
+  width: 100%;
+  height: 100%;
 }
 
-/* --- index.html (残高入力ページ) 用のスタイル --- 
-*/
-
-/* 全体を画面の中央に配置するためのコンテナ */
+/* --- コンテナ (修正: 画面からはみ出しにくい設定に変更) --- */
 .container {
   display: flex;
-  flex-direction: column; /* 要素を縦に並べる */
-  justify-content: center; /* 垂直方向の中央揃え */
-  align-items: center; /* 水平方向の中央揃え */
-  text-align: center;
-  min-height: 80vh; /* 画面の高さいっぱいに広げる */
-  padding: 20px;
-  box-sizing: border-box;
+  flex-direction: column;
+  align-items: center;
+  /* justify-content: center; ← これを削除（コンテンツが多いと上下が切れるため） */
+
+  min-height: 100vh;
+  padding: 40px 20px; /* 上下に余裕を持たせる */
+  max-width: 500px;
+  margin: 0 auto;
 }
 
-/* アプリタイトル */
 h1 {
-  font-weight: 500;
-  font-size: 2rem;
-  margin-bottom: 10px;
-}
-
-/* 説明テキスト */
-p {
-  font-size: 1rem;
-  margin-bottom: 30px;
-}
-
-/* (追加) 入力欄と「円」をまとめるコンテナ */
-.input-container {
-  position: relative;
-  width: 80%;
-  max-width: 280px;
-}
-
-/* 残高入力フィールド (画像のデザインを再現) */
-.balance-input {
-  width: 100%; /* (変更) 親コンテナいっぱいに広げる */
-  max-width: 280px;
-  /* (変更) 「円」のスペースを確保するために右側のパディングを増やす */
-  padding: 20px 40px 20px 20px;
-  font-size: 1.1rem;
+  color: var(--color-primary);
+  font-size: 1.8rem;
+  margin: 0 0 24px 0;
   text-align: center;
-
-  border: 2px solid #ccc;
-  border-radius: 30px; /* 角を丸くする */
-
-  /* 影をつけて立体感を出す */
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-
-  /* ブラウザ標準のスタイルをリセット */
-  -webkit-appearance: none;
-  appearance: none;
-  box-sizing: border-box;
-  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-/* 入力欄にフォーカスが当たった時のスタイル */
-.balance-input:focus {
-  outline: none;
-  border-color: #007aff; /* 少し色を変える */
-  box-shadow: 0 4px 10px rgba(0, 122, 255, 0.2);
+/* --- フィルタセクション (修正: 文字が折り返さないよう調整) --- */
+.filter-section {
+  width: 100%;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  padding: 16px;
+  margin-bottom: 24px;
+  text-align: left;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
 }
 
-/* 入力欄のプレースホルダー（薄い文字）のスタイル */
-.balance-input::placeholder {
-  color: #aaa;
+.filter-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text-sub);
+  margin-bottom: 12px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 8px;
 }
 
-/* (補足) 数値入力欄の上下矢印を非表示にする */
-.balance-input::-webkit-outer-spin-button,
-.balance-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-.balance-input[type="number"] {
-  -moz-appearance: textfield;
+.filter-grid {
+  display: grid;
+  /* 修正: 画面幅に合わせて自動で列数を調整 (最小130px確保) */
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
 }
 
-/* (追加) 「円」の単位を表示するスタイル */
-.currency-unit {
-  position: absolute;
-  top: 50%;
-  right: 20px; /* 入力欄の右端からの位置 */
-  transform: translateY(-50%); /* 上下中央揃え */
-
-  font-size: 1.1rem;
-  color: #555; /* テキストより少し薄い色 */
-
-  /* デフォルトでは非表示 */
-  display: none;
-
-  /* ユーザーがテキストを選択できないようにする */
-  pointer-events: none;
-}
-
-/* (追加) 入力欄に何か入力された時（placeholderが消えた時）だけ、「円」を表示 */
-.balance-input:not(:placeholder-shown) + .currency-unit {
-  display: block;
-}
-
-/* 確定ボタン (画像の装飾的な枠線を再現) */
-.confirm-button {
-  margin-top: 40px; /* 入力欄との間隔を空ける */
-  padding: 12px 30px;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #444;
-  background-color: #fff;
-
-  /* 二重線で装飾的な枠線を表現 */
-  border: 4px double #999;
-
-  border-radius: 5px;
+.filter-checkbox {
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
   cursor: pointer;
-  transition: background-color 0.2s, border-color 0.2s;
+  user-select: none;
+  white-space: nowrap; /* 修正: 文字の折り返しを禁止 */
 }
 
-/* ボタンにマウスを乗せた時のスタイル */
-.confirm-button:hover {
-  background-color: #f7f7f7;
-  border-color: #333;
+.filter-checkbox input {
+  margin-right: 8px;
+  transform: scale(1.1);
+  accent-color: var(--color-primary);
+  flex-shrink: 0; /* チェックボックスが潰れないように */
 }
 
-/* (追加) 結果表示エリアのスタイル */
-.result-area {
-  width: 90%;
-  max-width: 320px;
-  margin-top: 30px;
-  padding: 15px;
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  background-color: #f9f9f9;
-
-  /* デフォルトでは非表示にしておく */
-  display: none;
+/* --- 入力グループ (修正: 崩れ防止) --- */
+.input-group {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: nowrap; /* 修正: 横並びを維持 */
 }
 
-.result-area h3 {
+.input-label {
+  font-weight: 700;
+  white-space: nowrap; /* 文字折り返し禁止 */
+  flex-shrink: 0; /* ラベル幅を確保 */
+}
+
+.input-field {
+  flex: 1; /* 残りの幅を埋める */
+  min-width: 0; /* 修正: Flexbox内での幅計算バグ防止 */
+  padding: 12px 16px;
   font-size: 1.1rem;
-  color: #333;
-  margin-top: 0;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-base);
+  outline: none;
+  transition: border-color 0.2s;
+  text-align: center;
+}
+
+.input-field:focus {
+  border-color: var(--color-border-focus);
+}
+
+.btn-icon {
+  width: 50px;
+  height: 50px;
+  background-color: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-base);
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+  flex-shrink: 0; /* 修正: ボタンサイズを固定 */
+}
+
+.btn-icon:hover {
+  background-color: var(--color-primary-hover);
+}
+
+/* --- リセットリンク --- */
+.reset-link-container {
+  width: 100%;
+  text-align: right;
+  margin-bottom: 24px;
+}
+
+#resetExcludedButton {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 5px;
+}
+
+/* --- 結果カード --- */
+.result-area {
+  width: 100%;
+}
+
+.result-card {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  animation: fadeIn 0.3s;
+  margin-bottom: 40px; /* 下部に余白を追加 */
+}
+
+.result-header {
+  background: #f0f7ff;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap; /* 修正: 画面が狭いときに折り返し許可 */
+  gap: 8px;
+}
+
+.result-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--color-primary);
+  white-space: nowrap;
+}
+
+.total-price {
+  font-size: 1.2rem;
+  font-weight: 700;
 }
 
 .suggestion-list {
-  list-style: none; /* 黒丸を消す */
-  padding-left: 0;
+  list-style: none;
+  padding: 0;
+  margin: 0;
   text-align: left;
 }
 
 .suggestion-list li {
-  padding: 8px 0;
+  padding: 12px 16px;
   border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px; /* 修正: アイテム間の隙間確保 */
 }
 
 .suggestion-list li:last-child {
   border-bottom: none;
 }
 
-/* (追加) 読み込み中・エラーのスタイル */
-.loading {
-  color: #555;
+/* リストアイテム内の調整 */
+.suggestion-list li > div:first-child {
+  flex: 1;
+  min-width: 0; /* 文字省略のために必要 */
 }
 
-.error {
-  color: #d9534f; /* エラー赤色 */
+.item-price {
+  font-weight: 700;
+  background: #f0f2f5;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+/* カウンターUI */
+.counter-ui {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  margin-right: 12px;
+}
+
+.counter-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: 1px solid #d0d5d9;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #546471;
+  font-size: 0.8rem;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.counter-val {
   font-weight: bold;
+  font-size: 0.9rem;
+  min-width: 20px;
+  text-align: center;
+  color: #1a1a1c;
 }
 
-/* --- ここから admin.html (商品管理ページ) 用のスタイル --- 
-*/
+/* エラー表示 */
+.error {
+  color: var(--color-error);
+  font-weight: 700;
+  background: #fee2e2;
+  padding: 12px;
+  border-radius: var(--radius-base);
+  text-align: center;
+}
 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --- 管理画面用スタイル (維持) --- */
 .admin-container {
   width: 90%;
   max-width: 600px;
@@ -189,113 +300,38 @@ p {
   background: #fff;
   border-radius: 10px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  text-align: left; /* adminページは全体を左揃えに */
 }
-
-.admin-container h1 {
-  text-align: left;
-}
-
-.form-container {
-  margin-bottom: 30px;
+.csv-upload-area {
+  border: 2px dashed var(--color-primary);
+  background: #f0f7ff;
   padding: 20px;
-  border: 1px solid #eee;
   border-radius: 8px;
-  background: #fdfdfd;
+  margin-bottom: 20px;
 }
-
 .form-group {
   margin-bottom: 15px;
 }
-
 .form-group label {
   display: block;
+  font-weight: 700;
   margin-bottom: 5px;
-  font-weight: 600;
-  color: #333;
 }
-
 .form-group input {
   width: 100%;
-  padding: 10px;
-  font-size: 1rem;
+  padding: 8px;
   border: 1px solid #ccc;
-  border-radius: 5px;
-  box-sizing: border-box; /* パディングを含めて幅100%にする */
+  border-radius: 4px;
 }
-
-#addButton {
-  padding: 10px 20px;
-  font-size: 1rem;
-  color: #fff;
-  background-color: #007bff;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-#addButton:hover {
-  background-color: #0056b3;
-}
-
-#productList h2 {
-  border-bottom: 2px solid #eee;
-  padding-bottom: 10px;
-}
-
-/* ▼▼▼ 表（テーブル）用のスタイル ▼▼▼ */
-
-/* 新しいテーブル用のスタイル */
 #itemsTable {
   width: 100%;
-  border-collapse: collapse; /* セルの境界線を結合 */
+  border-collapse: collapse;
   margin-top: 15px;
 }
-
 #itemsTable th,
 #itemsTable td {
-  border: 1px solid #ddd; /* 罫線 */
-  padding: 10px;
-  text-align: left;
-  vertical-align: middle; /* 上下中央揃え */
+  border: 1px solid #ddd;
+  padding: 8px;
 }
-
 #itemsTable th {
-  background-color: #f8f8f8; /* ヘッダーの背景色 */
-  font-weight: 600;
-}
-
-/* テーブル内の削除ボタンのスタイル */
-#itemsTable .delete-button {
-  padding: 5px 10px;
-  font-size: 0.9rem;
-  color: #d9534f;
-  background-color: transparent;
-  border: 1px solid #d9534f;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-#itemsTable .delete-button:hover {
-  background-color: #d9534f;
-  color: #fff;
-}
-
-.checkbox-container {
-  /* 入力欄 (input-container) とレイアウトを合わせる */
-  width: 80%;
-  max-width: 280px;
-
-  margin-top: 20px; /* 上の要素との間隔 */
-  text-align: left; /* ラベルを左揃えにするため */
-
-  /* (補足) admin.html用の .form-group とスタイルが重複しないよう、
-     index.html 用に .checkbox-container という別のクラス名を使用しています。 */
-}
-
-/* チェックボックス本体とラベルの間隔 */
-.checkbox-container input {
-  margin-right: 5px;
+  background: #f8f8f8;
 }
