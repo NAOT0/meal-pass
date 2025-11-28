@@ -1,0 +1,7 @@
+{
+  "name": "meal-pass-app",
+  "version": "1.0.0",
+  "dependencies": {
+    "firebase": "^9.22.0"
+  }
+}
