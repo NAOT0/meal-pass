@@ -6,7 +6,6 @@ import { fetchMenuData } from "./api-client.js";
 
 // --- 設定 ---
 const MAX_EXCLUDED_ITEMS = 5;
-// ▼▼▼ 追加: 連続スキャンの間隔 (ミリ秒) ▼▼▼
 const SCAN_INTERVAL = 1500;
 
 // --- DOM要素 ---
@@ -20,6 +19,8 @@ const retrySearchBtn = document.getElementById("retrySearchBtn");
 const scanBtn = document.getElementById("scanBtn");
 const scannerContainer = document.getElementById("scannerContainer");
 const stopScanBtn = document.getElementById("stopScanBtn");
+// ▼▼▼ 通知用要素の取得 (HTMLに追加します) ▼▼▼
+const toastElement = document.getElementById("toast");
 
 // --- 状態 (State) ---
 let menuGroups = [];
@@ -32,7 +33,6 @@ let currentSuggestion = [];
 
 // カメラ用変数
 let codeReader = null;
-// ▼▼▼ 追加: 前回のスキャン時刻を記録する変数 ▼▼▼
 let lastScanTime = 0;
 
 // --- 初期化 ---
@@ -62,8 +62,16 @@ window.addEventListener("DOMContentLoaded", async () => {
   });
 
   if (typeof ZXing !== "undefined") {
-    codeReader = new ZXing.BrowserMultiFormatReader();
-    console.log("ZXing library initialized");
+    // ▼▼▼ 高速化設定: JANコード(EAN_13)のみに絞るヒントを作成 ▼▼▼
+    const hints = new Map();
+    // EAN_13 = JANコードです
+    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+      ZXing.BarcodeFormat.EAN_13,
+    ]);
+
+    // ヒントを渡してインスタンス化
+    codeReader = new ZXing.BrowserMultiFormatReader(hints);
+    console.log("ZXing library initialized with EAN_13 only");
   } else {
     console.warn("ZXing library not found");
   }
@@ -85,7 +93,6 @@ window.toggleDetails = toggleDetails;
 
 window.removeSlot = function (id) {
   if (lockedGroupIds.has(id)) {
-    // ロック機能のバツボタンとは別に、カウントアイテムのバツボタンとしても機能させる
     alert("ロックを解除してください。");
     return;
   }
@@ -102,7 +109,6 @@ window.removeSlot = function (id) {
   }
   currentSuggestion = currentSuggestion.filter((item) => item.id !== id);
 
-  // ★重要: バツボタンでスキャンした商品のカウントもリセットする
   if (group) {
     group.items.forEach((item) => {
       if (itemCounts[item.jan]) delete itemCounts[item.jan];
@@ -238,7 +244,7 @@ function updateCurrentView(calculatedTotal, balance) {
 }
 
 // ---------------------------------------------------------
-// ▼▼▼ 修正済み: 連続スキャン対応のカメラ機能 ▼▼▼
+// ▼▼▼ カメラ機能の実装 (高速化設定済み) ▼▼▼
 // ---------------------------------------------------------
 
 if (scanBtn) {
@@ -265,7 +271,6 @@ function startScanning() {
   codeReader
     .decodeFromVideoDevice(null, "video", (result, err) => {
       if (result) {
-        // ▼▼▼ バッファ処理: 前回のスキャンから一定時間経過していない場合は無視 ▼▼▼
         const now = Date.now();
         if (now - lastScanTime < SCAN_INTERVAL) {
           return;
@@ -273,12 +278,7 @@ function startScanning() {
         lastScanTime = now;
 
         console.log("Scanned:", result.text);
-
-        // スキャン成功処理を実行
         handleJanScanSuccess(result.text);
-
-        // ★重要: ここにあった stopScanning() を削除しました
-        // これによりカメラが停止せず、連続読み取りが可能になります
       }
     })
     .catch((err) => {
@@ -310,13 +310,11 @@ function handleJanScanSuccess(scannedJan) {
   }
 
   if (!foundItem) {
-    // 連続モードなのでalertは少し邪魔かもしれませんが、見つからない場合は通知
-    // 音などを鳴らすとより良いUXになります
     console.warn(`JAN not found: ${scannedJan}`);
+    showToast("メニューに見つかりません", "error");
     return;
   }
 
-  // カウントアップ
   const currentCount = itemCounts[scannedJan] || 0;
   itemCounts[scannedJan] = currentCount + 1;
 
@@ -324,10 +322,23 @@ function handleJanScanSuccess(scannedJan) {
     userExcludedIds.delete(targetGroupId);
   }
 
-  // 再計算してリストを更新 (スキャンされたアイテムはロジック上、最上部に表示されます)
   recalculateAndRender();
   clearNotification();
 
-  // ユーザーへのフィードバック（連続スキャン用にコンソールログのみに変更）
-  console.log(`${foundItem.name} added.`);
+  // ▼▼▼ トースト通知を表示 ▼▼▼
+  showToast(`${foundItem.name} を追加しました`);
+}
+
+// ▼▼▼ トースト表示関数 ▼▼▼
+function showToast(message, type = "success") {
+  const toast = document.getElementById("toast");
+  if (!toast) return;
+
+  toast.textContent = message;
+  toast.className = `toast show ${type}`; // typeによって色を変えることも可能
+
+  // 3秒後に消える
+  setTimeout(() => {
+    toast.className = toast.className.replace("show", "");
+  }, 2500);
 }
