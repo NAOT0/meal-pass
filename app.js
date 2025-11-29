@@ -4,10 +4,10 @@ import { calculateCombination } from "./logic.js";
 import { renderResults, showError, toggleDetails } from "./ui.js";
 import { fetchMenuData } from "./api-client.js";
 
-// CDNで読み込んだライブラリを使うため、importは不要
-
 // --- 設定 ---
 const MAX_EXCLUDED_ITEMS = 5;
+// ▼▼▼ 追加: 連続スキャンの間隔 (ミリ秒) ▼▼▼
+const SCAN_INTERVAL = 1500;
 
 // --- DOM要素 ---
 const balanceInput = document.getElementById("balanceInput");
@@ -31,7 +31,9 @@ let coopExcludedQueue = [];
 let currentSuggestion = [];
 
 // カメラ用変数
-let codeReader = null; // window.ZXing.BrowserMultiFormatReaderのインスタンスが入る
+let codeReader = null;
+// ▼▼▼ 追加: 前回のスキャン時刻を記録する変数 ▼▼▼
+let lastScanTime = 0;
 
 // --- 初期化 ---
 window.addEventListener("DOMContentLoaded", async () => {
@@ -45,7 +47,6 @@ window.addEventListener("DOMContentLoaded", async () => {
     );
   }
 
-  // フィルタのイベントなどは既存のまま...
   document.querySelectorAll(".filter-pill").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       const targetId = btn.getAttribute("data-target");
@@ -60,14 +61,11 @@ window.addEventListener("DOMContentLoaded", async () => {
     notifyChange();
   });
 
-  // ▼▼▼ カメラ用ライブラリの準備 ▼▼▼
   if (typeof ZXing !== "undefined") {
-    // ZXingライブラリがHTMLで読み込まれていることを確認
     codeReader = new ZXing.BrowserMultiFormatReader();
     console.log("ZXing library initialized");
   } else {
-    // ライブラリがロードされていない場合、検索ボタンを押すまでは静かにエラーとする
-    console.warn("ZXing library not found (check index.html script tag)");
+    console.warn("ZXing library not found");
   }
 });
 
@@ -82,11 +80,12 @@ function clearNotification() {
   if (retrySearchBtn) retrySearchBtn.classList.remove("needs-update");
 }
 
-// --- グローバル関数登録（省略） ---
+// --- グローバル関数登録 ---
 window.toggleDetails = toggleDetails;
 
 window.removeSlot = function (id) {
   if (lockedGroupIds.has(id)) {
+    // ロック機能のバツボタンとは別に、カウントアイテムのバツボタンとしても機能させる
     alert("ロックを解除してください。");
     return;
   }
@@ -102,12 +101,15 @@ window.removeSlot = function (id) {
     }
   }
   currentSuggestion = currentSuggestion.filter((item) => item.id !== id);
+
+  // ★重要: バツボタンでスキャンした商品のカウントもリセットする
   if (group) {
     group.items.forEach((item) => {
       if (itemCounts[item.jan]) delete itemCounts[item.jan];
     });
   }
-  recalculateAndRender(); // 枠の削除後も再計算が必要です
+
+  recalculateAndRender();
   notifyChange();
 };
 
@@ -118,7 +120,7 @@ window.toggleGroupLock = function (groupId) {
     lockedGroupIds.add(groupId);
     userExcludedIds.delete(groupId);
   }
-  recalculateAndRender(); // ロック変更後も再計算が必要です
+  recalculateAndRender();
 };
 
 window.updateItemCount = function (groupId, jan, delta) {
@@ -129,7 +131,7 @@ window.updateItemCount = function (groupId, jan, delta) {
   if (next > 0) {
     userExcludedIds.delete(groupId);
   }
-  recalculateAndRender(); // 個数変更後も再計算が必要です
+  recalculateAndRender();
 };
 
 window.resetGroupItemCounts = function (groupId) {
@@ -139,22 +141,13 @@ window.resetGroupItemCounts = function (groupId) {
       if (itemCounts[item.jan]) delete itemCounts[item.jan];
     });
   }
-  recalculateAndRender(); // リセット後も再計算が必要です
+  recalculateAndRender();
 };
 
-// ---------------------------------------------------------
-// ▼▼▼ 修正・追加: 再計算処理を独立させる ▼▼▼
-// ---------------------------------------------------------
-
-/**
- * 現在の状態（残高、個数指定、フィルター）に基づいて組み合わせを計算し、
- * 結果を画面にレンダリングする
- */
 function recalculateAndRender() {
   const balance = parseInt(balanceInput.value, 10) || 0;
 
-  if (!isDataLoaded || !balance) {
-    // データ未ロード、または残高なしの場合は再計算しない
+  if (!isDataLoaded) {
     updateCurrentView(0, 0);
     return;
   }
@@ -177,14 +170,9 @@ function recalculateAndRender() {
     lockedGroupIds
   );
 
-  // logic.js側でランダム制限とユニーク化が行われている
   currentSuggestion = result.suggestion;
-
-  // 画面更新を行う
   updateCurrentView(result.total, balance);
 }
-
-// --- アクション ---
 
 function performSearch() {
   const balance = parseInt(balanceInput.value, 10);
@@ -192,20 +180,11 @@ function performSearch() {
     alert("金額を入力してください");
     return;
   }
-
   recalculateAndRender();
-
-  // 検索したらバッジを消す
   clearNotification();
 }
 
-// ---------------------------------------------------------
-// ▲▲▲ 修正・追加ここまで ▲▲▲
-// ---------------------------------------------------------
-
-if (searchBtn) {
-  searchBtn.addEventListener("click", performSearch);
-}
+if (searchBtn) searchBtn.addEventListener("click", performSearch);
 
 if (retrySearchBtn) {
   retrySearchBtn.addEventListener("click", () => {
@@ -220,32 +199,23 @@ if (resetExcludedButton) {
     itemCounts = {};
     lockedGroupIds.clear();
     currentSuggestion = [];
-
-    // リセット時は updateCurrentView に 0 を渡してフッターをクリア
     updateCurrentView(0, 0);
-
     resultArea.innerHTML =
       '<div class="empty-state">リセットしました。<br>「提案」ボタンを押してランチを決めましょう！</div>';
-
     clearNotification();
   });
 }
 
-/**
- * 画面表示を更新するメインのレンダリング関数
- */
 function updateCurrentView(calculatedTotal, balance) {
   calculatedTotal = calculatedTotal || 0;
   balance = balance || 0;
 
-  // 現在開いているアコーディオンのIDを取得して保存 (リスト開閉維持のため)
   const openGroupIds = new Set();
   document.querySelectorAll(".details-container.open").forEach((el) => {
     const id = el.id.replace("details-", "");
     openGroupIds.add(id);
   });
 
-  // currentSuggestionからユニークなグループを抽出
   const uniqueGroups = [];
   const groupIds = new Set();
 
@@ -256,21 +226,19 @@ function updateCurrentView(calculatedTotal, balance) {
     }
   });
 
-  // (注: totalの計算は recalculateAndRender で行われた total を使用する)
-
   renderResults(
     uniqueGroups,
     balance,
     resultArea,
     itemCounts,
     lockedGroupIds,
-    calculatedTotal, // recalculateAndRenderで計算された合計金額を渡す
-    openGroupIds // 開閉状態を渡す
+    calculatedTotal,
+    openGroupIds
   );
 }
 
 // ---------------------------------------------------------
-// ▼▼▼ カメラ機能の実装 (Global変数 ZXing を使用) ▼▼▼
+// ▼▼▼ 修正済み: 連続スキャン対応のカメラ機能 ▼▼▼
 // ---------------------------------------------------------
 
 if (scanBtn) {
@@ -291,24 +259,31 @@ function startScanning() {
     return;
   }
 
-  // UI切り替え
   scanBtn.style.display = "none";
   scannerContainer.style.display = "block";
 
-  // カメラを起動してデコード開始
   codeReader
     .decodeFromVideoDevice(null, "video", (result, err) => {
       if (result) {
+        // ▼▼▼ バッファ処理: 前回のスキャンから一定時間経過していない場合は無視 ▼▼▼
+        const now = Date.now();
+        if (now - lastScanTime < SCAN_INTERVAL) {
+          return;
+        }
+        lastScanTime = now;
+
         console.log("Scanned:", result.text);
+
+        // スキャン成功処理を実行
         handleJanScanSuccess(result.text);
-        stopScanning();
+
+        // ★重要: ここにあった stopScanning() を削除しました
+        // これによりカメラが停止せず、連続読み取りが可能になります
       }
     })
     .catch((err) => {
       console.error(err);
-      alert(
-        "カメラの起動に失敗しました。カメラへのアクセスを許可してください。"
-      );
+      alert("カメラの起動に失敗しました。");
       stopScanning();
     });
 }
@@ -321,7 +296,6 @@ function stopScanning() {
   scanBtn.style.display = "inline-block";
 }
 
-// JANコードヒット時の処理
 function handleJanScanSuccess(scannedJan) {
   let foundItem = null;
   let targetGroupId = null;
@@ -336,11 +310,13 @@ function handleJanScanSuccess(scannedJan) {
   }
 
   if (!foundItem) {
-    alert(`JANコード: ${scannedJan}\nメニューに見つかりませんでした。`);
+    // 連続モードなのでalertは少し邪魔かもしれませんが、見つからない場合は通知
+    // 音などを鳴らすとより良いUXになります
+    console.warn(`JAN not found: ${scannedJan}`);
     return;
   }
 
-  // 1. カウントアップ
+  // カウントアップ
   const currentCount = itemCounts[scannedJan] || 0;
   itemCounts[scannedJan] = currentCount + 1;
 
@@ -348,9 +324,10 @@ function handleJanScanSuccess(scannedJan) {
     userExcludedIds.delete(targetGroupId);
   }
 
-  // 2. 最も重要な修正: 再計算を実行する
-  recalculateAndRender(); // <--- ここで新しいリストが生成されます
-
-  // 3. バッジをクリア
+  // 再計算してリストを更新 (スキャンされたアイテムはロジック上、最上部に表示されます)
+  recalculateAndRender();
   clearNotification();
+
+  // ユーザーへのフィードバック（連続スキャン用にコンソールログのみに変更）
+  console.log(`${foundItem.name} added.`);
 }
