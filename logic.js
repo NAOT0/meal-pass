@@ -88,8 +88,9 @@ export function calculateCombination(
     }
   });
 
-  // --- STEP 3: ランダム選出 ---
+  // --- STEP 3: ランダム選出 (ロジックが選んだ全ての候補) ---
   let pool = shuffle([...candidates]);
+  // 既存の優先度順ソートを維持
   pool.sort((a, b) => b.priority - a.priority);
 
   for (const group of pool) {
@@ -133,20 +134,58 @@ export function calculateCombination(
     if (currentTotal === balance) break;
   }
 
-  // ★修正: 並び順のロジックを変更
-  suggestion.sort((a, b) => {
-    // 1. ロックされているもの（個数指定 or 枠固定）を最優先
-    const aLocked = a.isItemLocked || a.isGroupLocked;
-    const bLocked = b.isItemLocked || b.isGroupLocked;
+  // ★★★ 最終提案リストをランダムに5つに制限するロジック ★★★
 
-    if (aLocked && !bLocked) return -1; // aが上
-    if (!aLocked && bLocked) return 1; // bが上
+  let finalSuggestion = [];
+  const MAX_DISPLAY = 5;
+  const usedIdsInFinal = new Set();
 
-    // 2. それ以外は優先度順
-    if (b.priority !== a.priority) return b.priority - a.priority;
-    // 3. 最後はID順
-    return b.id.localeCompare(a.id);
+  // 1. ロックされているユニークな商品を全て確定
+  suggestion.forEach((item) => {
+    if (item.isItemLocked || item.isGroupLocked) {
+      if (!usedIdsInFinal.has(item.id)) {
+        finalSuggestion.push(item);
+        usedIdsInFinal.add(item.id);
+      }
+    }
   });
 
-  return { suggestion, total: currentTotal, remaining: balance - currentTotal };
+  // 2. ロックされていない商品の中から、残りの枠をランダムに選ぶ
+  const remainingSlots = MAX_DISPLAY - finalSuggestion.length;
+
+  if (remainingSlots > 0) {
+    // ロックされていない商品だけを抽出
+    let candidatesForRandom = suggestion.filter(
+      (item) => !usedIdsInFinal.has(item.id)
+    );
+
+    // ランダム性確保のためシャッフル
+    candidatesForRandom = shuffle(candidatesForRandom);
+
+    for (const item of candidatesForRandom) {
+      if (finalSuggestion.length >= MAX_DISPLAY) break;
+
+      // 同じグループIDは入れない
+      if (!usedIdsInFinal.has(item.id)) {
+        finalSuggestion.push(item);
+        usedIdsInFinal.add(item.id);
+      }
+    }
+  }
+
+  // 3. 最終提案リストを、ロック状態を優先するUXのためソート
+  // （ロックされていないものはランダムな順序を維持）
+  finalSuggestion.sort((a, b) => {
+    const aLocked = a.isItemLocked || a.isGroupLocked;
+    const bLocked = b.isItemLocked || b.isGroupLocked;
+    if (aLocked && !bLocked) return -1;
+    if (!aLocked && bLocked) return 1;
+    return 0;
+  });
+
+  return {
+    suggestion: finalSuggestion,
+    total: currentTotal,
+    remaining: balance - currentTotal,
+  };
 }

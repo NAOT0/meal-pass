@@ -1,230 +1,233 @@
 // ui.js
 
+// ★追加: logic.js から shuffle 関数をコピー
+function shuffle(array) {
+  const newArray = [...array];
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+  }
+  return newArray;
+}
+
 export function renderResults(
-  result,
+  suggestionList,
   balance,
   resultArea,
   itemCounts,
   lockedGroupIds,
+  calculatedTotal,
   openGroupIds = new Set()
 ) {
-  resultArea.style.display = "block";
+  const footerTotal = document.getElementById("footerTotal");
+  const footerRemain = document.getElementById("footerRemain");
+  const footerStatus = document.getElementById("footerStatus");
 
-  if (result.suggestion.length === 0) {
-    resultArea.innerHTML = `<div class="error">条件に合う候補がありません</div>`;
+  // フッター更新
+  footerTotal.textContent = `¥ ${calculatedTotal.toLocaleString()}`;
+  const remain = balance - calculatedTotal;
+  footerRemain.textContent = `¥ ${remain.toLocaleString()}`;
+
+  if (remain < 0) {
+    footerRemain.className = "value";
+    footerStatus.innerHTML = `<span class="badge-status">予算オーバー！</span>`;
+  } else {
+    footerRemain.className = "value safe";
+    footerStatus.innerHTML = "";
+  }
+
+  // リストが空の場合
+  if (!suggestionList || suggestionList.length === 0) {
+    resultArea.innerHTML = `<div class="empty-state">選択された商品はありません</div>`;
     return;
   }
 
-  const diff = balance - result.total;
-  let balanceDisplay =
-    diff >= 0
-      ? `<span style="color:var(--color-text-sub);">残高: ${diff}円</span>`
-      : `<span style="color:var(--color-error); font-weight:bold;">+${Math.abs(
-          diff
-        )}円 超過</span>`;
+  let html = "";
 
-  let html = `
-        <div class="result-card">
-            <div class="result-header">
-                <h3>合計: <span class="total-price">${result.total}円</span></h3>
-                ${balanceDisplay}
-            </div>
-            <ul class="suggestion-list">
-    `;
-
-  const displayGroups = [];
-  const groupMap = new Map();
-  result.suggestion.forEach((item) => {
-    if (!groupMap.has(item.id)) {
-      groupMap.set(item.id, { ...item, displayCount: 0, displayTotal: 0 });
-      displayGroups.push(groupMap.get(item.id));
-    }
-    const g = groupMap.get(item.id);
-    g.displayCount++;
-    g.displayTotal += item.price;
-  });
-
-  displayGroups.forEach((group) => {
-    const isBoosted = group.isCoop;
-    const coopBadge = isBoosted ? `<span class="badge-coop">COOP</span>` : "";
-
-    const isGroupLocked = lockedGroupIds.has(group.id);
-    const isItemLocked = group.isItemLocked;
-    const isLockedAny = isGroupLocked || isItemLocked;
-
-    const lockIconClass = isGroupLocked ? "fa-lock" : "fa-lock-open";
-    const lockBtnStateClass = isGroupLocked ? "locked" : "unlocked";
-
-    let displayName = "";
-    if (group.type === "ONIGIRI") displayName = "おにぎり";
-    else if (group.isItemLocked) displayName = group.lockedItemName;
-    else
-      displayName =
-        group.items.length === 1 ? group.items[0].name : group.rawLabel;
-
-    let priceDisplay = `${group.displayTotal}円`;
-
-    // 外部カウンター (ONIGIRIのみ)
-    let externalCounterHtml = "";
-    const isExternalCounter =
-      group.type === "ONIGIRI" && group.items.length > 0;
-
-    if (isExternalCounter) {
-      const targetJan = group.isItemLocked ? group.jan : group.items[0].jan;
-      const currentCount = itemCounts[targetJan] || 0;
-      const activeClass = currentCount > 0 ? "active" : "";
-
-      externalCounterHtml = `
-                <div class="counter-ui" onclick="event.stopPropagation()">
-                    <button class="counter-btn" onclick="window.updateItemCount('${group.id}', '${targetJan}', -1)"><i class="fas fa-minus"></i></button>
-                    <span class="counter-val ${activeClass}">${currentCount}</span>
-                    <button class="counter-btn" onclick="window.updateItemCount('${group.id}', '${targetJan}', 1)"><i class="fas fa-plus"></i></button>
-                </div>
-            `;
-    }
+  suggestionList.forEach((group) => {
+    const isLocked = lockedGroupIds.has(group.id);
+    const iconClass = group.icon ? `fas ${group.icon}` : "fas fa-utensils";
+    const coopBadge = group.isCoop
+      ? `<span class="badge-coop">COOP</span>`
+      : "";
 
     const isOpen = openGroupIds.has(group.id);
-    const detailsStyle = isOpen ? "max-height:5000px;" : "max-height:0;";
-    const detailsClass = isOpen ? "open" : "";
-    const iconTransform = isOpen ? "rotate(180deg)" : "rotate(0deg)";
+    const detailsClass = isOpen
+      ? "details-container open"
+      : "details-container";
 
-    // --- 詳細エリア (下段) HTML生成 ---
-    let itemsHtml = "";
-    if (group.priority === 11 || group.type === "ONIGIRI") {
-      let message = "店頭でご確認ください。";
-      if (group.type === "ONIGIRI")
-        message = "店頭にてお好きな種類をお選びください。";
-
-      itemsHtml = `
-                <div class="details-message">
-                    <i class="fas fa-info-circle"></i> ${message}
-                </div>`;
-
-      if (group.type === "ONIGIRI") {
-        itemsHtml += `
-                    <div class="details-reset-container">
-                         <button class="details-reset-btn" onclick="window.resetGroupItemCounts('${group.id}')">
-                            <i class="fas fa-undo"></i> 個数をリセット
-                         </button>
-                    </div>`;
+    // 名前の決定
+    let displayName = group.name || "";
+    if (group.type === "ONIGIRI") {
+      displayName = "おにぎり";
+    } else if (!displayName) {
+      if (group.items && group.items.length === 1) {
+        displayName = group.items[0].name;
+      } else if (group.rawLabel) {
+        displayName = group.rawLabel;
+      } else {
+        displayName = "商品名なし";
       }
-    } else {
-      itemsHtml = group.items
+    }
+
+    let totalCountInGroup = 0;
+    if (group.items) {
+      group.items.forEach((i) => {
+        totalCountInGroup += itemCounts[i.jan] || 0;
+      });
+    }
+    if (totalCountInGroup === 0) totalCountInGroup = 1;
+
+    let detailsHtml = "";
+    let hasDetails = false;
+
+    // パターンA: おにぎりの場合
+    if (group.type === "ONIGIRI") {
+      hasDetails = true;
+      detailsHtml = `
+        <div class="detail-message">
+          <i class="fas fa-info-circle"></i> 店頭にてお好きな種類をお選びください。
+        </div>
+        <div class="detail-actions">
+           <button class="text-btn" onclick="window.resetGroupItemCounts('${group.id}')">
+             <i class="fas fa-undo"></i> 個数をリセット
+           </button>
+        </div>
+      `;
+    }
+    // パターンB: 内製弁当の場合
+    else if (group.type === "BENTO") {
+      hasDetails = true;
+      detailsHtml = `
+            <div class="detail-message">
+              <i class="fas fa-info-circle"></i> 種類は店頭で選んでください。
+            </div>
+        `;
+    }
+    // パターンC: 通常商品で、中身がある場合 (お菓子など)
+    else if (group.items && group.items.length > 0) {
+      hasDetails = true;
+
+      // ★★★ 修正箇所: アイテムリストをシャッフルして5個に制限 ★★★
+      let itemsToDisplay = group.items;
+      if (group.items.length > 5) {
+        // シャッフルしてから先頭5件を取得
+        itemsToDisplay = shuffle(group.items).slice(0, 5);
+      }
+      // ★★★ 修正箇所 終わり ★★★
+
+      const itemsRows = itemsToDisplay
         .map((item) => {
           const count = itemCounts[item.jan] || 0;
-          const activeClass = count > 0 ? "active" : "";
-
           return `
-                <div class="details-item-row">
-                    <div class="details-item-name">${item.name}</div>
-                    <div class="details-counter-wrapper">
-                        <button class="counter-btn" onclick="window.updateItemCount('${group.id}', '${item.jan}', -1)"><i class="fas fa-minus"></i></button>
-                        <span class="counter-val ${activeClass}">${count}</span>
-                        <button class="counter-btn" onclick="window.updateItemCount('${group.id}', '${item.jan}', 1)"><i class="fas fa-plus"></i></button>
-                    </div>
-                </div>`;
+          <div class="detail-row">
+            <div class="detail-name">${item.name}</div>
+            <div class="detail-counter">
+               <button class="btn-count-small" onclick="window.updateItemCount('${group.id}', '${item.jan}', -1)">-</button>
+               <span class="count-val-small">${count}</span>
+               <button class="btn-count-small" onclick="window.updateItemCount('${group.id}', '${item.jan}', 1)">+</button>
+            </div>
+          </div>
+        `;
         })
         .join("");
 
-      itemsHtml += `
-                <div class="details-reset-container">
-                     <button class="details-reset-btn" onclick="window.resetGroupItemCounts('${group.id}')">
-                        <i class="fas fa-undo"></i> 個数をリセット
-                     </button>
-                </div>`;
+      detailsHtml = `
+        <div class="detail-list">${itemsRows}</div>
+        <div class="detail-actions">
+           <button class="text-btn" onclick="window.resetGroupItemCounts('${group.id}')">
+             <i class="fas fa-undo"></i> 個数をリセット
+           </button>
+        </div>
+      `;
     }
 
-    // --- メインコンテンツ (上段・左側) HTML生成 ---
-    let mainContentHtml = "";
+    const mainTargetJan =
+      group.items && group.items.length > 0 ? group.items[0].jan : "";
 
-    if (group.type === "ONIGIRI") {
-      // おにぎりの場合は2行構成 (名前 + カウンタ)
-      mainContentHtml = `
-                <div class="item-header-container-col">
-                    <div class="item-header-row-primary">
-                        <div class="item-info-group">
-                            <i class="fas ${group.icon} item-icon"></i>
-                            <span class="item-name">${displayName}</span>
-                            ${coopBadge}
-                        </div>
-                    </div>
-                    <div class="item-header-row-secondary">
-                        ${externalCounterHtml}
-                    </div>
-                </div>
-            `;
-    } else {
-      // 通常商品
-      mainContentHtml = `
-                <div class="item-header-container-row">
-                    <div class="item-info-group">
-                        <i class="fas ${group.icon} item-icon"></i>
-                        <span class="item-name">${displayName}</span>
-                        ${coopBadge}
-                    </div>
-                </div>
-            `;
-    }
+    const chevronStyle = isOpen ? 'style="transform: rotate(180deg);"' : "";
+    const chevronHtml = hasDetails
+      ? `<i class="fas fa-chevron-down chevron-icon" id="chevron-${group.id}" ${chevronStyle}></i>`
+      : ``;
 
-    // --- アクションボタン (上段・右側) HTML生成 ---
-    // ※ ここを一つのブロックとして定義します
-    const actionButtonsHtml = `
-            <div class="item-actions">
-                <span class="item-price">${priceDisplay}</span>
-                <button class="btn-circle btn-lock ${lockBtnStateClass}" onclick="event.stopPropagation(); window.toggleGroupLock('${group.id}')">
-                    <i class="fas ${lockIconClass}"></i>
-                </button>
-                <button class="btn-circle btn-remove" onclick="event.stopPropagation(); window.removeSlot('${group.id}')">
-                    <i class="fas fa-times"></i>
-                </button>
-                <i id="icon-${group.id}" class="fas fa-chevron-down" style="font-size:0.8rem; color:#aaa; transition:transform 0.2s; margin-left:4px; transform: ${iconTransform};"></i>
-            </div>
-    `;
-
-    // --- 全体の組み立て ---
-    // <li> の中に 上段(header) と 下段(details) を並べる構造に変更
     html += `
-            <li style="${isLockedAny ? "background-color:#fff8e1;" : ""}">
-                
-                <div class="item-top-row" onclick="window.toggleDetails('${
-                  group.id
-                }')">
-                    <div class="item-info-area">
-                        ${mainContentHtml}
-                    </div>
-                    ${actionButtonsHtml}
-                </div>
-                
-                <div id="details-${
-                  group.id
-                }" class="details-container ${detailsClass}" style="${detailsStyle}">
-                    ${itemsHtml}
-                </div>
-
-            </li>
-        `;
+      <div class="item-card-wrapper">
+        <div class="item-card ${
+          isLocked ? "locked" : ""
+        }" onclick="window.toggleDetails('${group.id}')">
+          <div class="card-left">
+            <div class="item-icon-box">
+              <i class="${iconClass}"></i>
+              ${coopBadge}
+            </div>
+            <div class="item-details">
+              <div class="card-item-name">${displayName}</div>
+              <div class="card-item-price">¥${group.price}</div>
+            </div>
+          </div>
+          <div class="card-right">
+            <div class="counter-box" onclick="event.stopPropagation()">
+              <button class="btn-count" onclick="window.updateItemCount('${
+                group.id
+              }', '${mainTargetJan}', -1)">
+                <i class="fas fa-minus"></i>
+              </button>
+              <div class="count-val">${totalCountInGroup}</div>
+              <button class="btn-count" onclick="window.updateItemCount('${
+                group.id
+              }', '${mainTargetJan}', 1)">
+                <i class="fas fa-plus"></i>
+              </button>
+            </div>
+            <div class="action-actions" onclick="event.stopPropagation()">
+              <button class="btn-icon-small ${
+                isLocked ? "active-lock" : ""
+              }" onclick="window.toggleGroupLock('${group.id}')">
+                <i class="fas ${isLocked ? "fa-lock" : "fa-lock-open"}"></i>
+              </button>
+              <button class="btn-icon-small remove-btn" onclick="window.removeSlot('${
+                group.id
+              }')">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            ${chevronHtml}
+          </div>
+        </div>
+        <div id="details-${group.id}" class="${detailsClass}">
+            <div class="details-inner">${detailsHtml}</div>
+        </div>
+      </div>
+    `;
   });
 
-  html += `</ul></div>`;
   resultArea.innerHTML = html;
-}
 
-export function showError(message, resultArea) {
-  resultArea.innerHTML = `<div class="error">${message}</div>`;
-  resultArea.style.display = "block";
+  if (openGroupIds.size > 0) {
+    openGroupIds.forEach((id) => {
+      const el = document.getElementById(`details-${id}`);
+      if (el) {
+        el.style.maxHeight = el.scrollHeight + "px";
+      }
+    });
+  }
 }
 
 export function toggleDetails(id) {
   const el = document.getElementById(`details-${id}`);
-  const icon = document.getElementById(`icon-${id}`);
+  const chevron = document.getElementById(`chevron-${id}`);
   if (el) {
     el.classList.toggle("open");
     if (el.classList.contains("open")) {
       el.style.maxHeight = el.scrollHeight + "px";
-      if (icon) icon.style.transform = "rotate(180deg)";
+      if (chevron) chevron.style.transform = "rotate(180deg)";
     } else {
       el.style.maxHeight = "0";
-      if (icon) icon.style.transform = "rotate(0deg)";
+      if (chevron) chevron.style.transform = "rotate(0deg)";
     }
   }
+}
+
+export function showError(message, resultArea) {
+  resultArea.innerHTML = `<div class="error">${message}</div>`;
 }

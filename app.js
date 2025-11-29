@@ -1,24 +1,28 @@
+// app.js
+
 import { calculateCombination } from "./logic.js";
 import { renderResults, showError, toggleDetails } from "./ui.js";
 import { fetchMenuData } from "./api-client.js";
 
 // --- 設定 ---
-const MAX_EXCLUDED_ITEMS = 5; // 生協商品の除外履歴保持数 (FIFO)
+const MAX_EXCLUDED_ITEMS = 5;
+const MAX_SUGGESTIONS_TO_DISPLAY = 5; // ★追加: 表示する最大提案数
 
 // --- DOM要素 ---
 const balanceInput = document.getElementById("balanceInput");
 const searchBtn = document.getElementById("searchBtn");
 const resultArea = document.getElementById("resultArea");
 const resetExcludedButton = document.getElementById("resetExcludedButton");
-const filterInputs = document.querySelectorAll(".filter-checkbox input");
+const retrySearchBtn = document.getElementById("retrySearchBtn");
 
 // --- 状態 (State) ---
 let menuGroups = [];
 let isDataLoaded = false;
 let userExcludedIds = new Set();
-let itemCounts = {}; // { "JANコード": 個数 }
-let lockedGroupIds = new Set(); // 枠固定されたグループID
-let coopExcludedQueue = []; // 生協商品の除外履歴 (FIFO用)
+let itemCounts = {};
+let lockedGroupIds = new Set();
+let coopExcludedQueue = [];
+let currentSuggestion = [];
 
 // --- 初期化 ---
 window.addEventListener("DOMContentLoaded", async () => {
@@ -31,78 +35,97 @@ window.addEventListener("DOMContentLoaded", async () => {
       resultArea
     );
   }
+
+  // フィルタのクリックイベント
+  document.querySelectorAll(".filter-pill").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      const targetId = btn.getAttribute("data-target");
+      btn.classList.toggle("active");
+      const checkbox = document.getElementById(targetId);
+      if (checkbox) checkbox.checked = !checkbox.checked;
+
+      // フィルタ変更は再検索条件が変わるので通知する
+      notifyChange();
+    });
+  });
+
+  // 残高変更イベント
+  balanceInput.addEventListener("input", () => {
+    // ★金額変更時は通知する
+    notifyChange();
+  });
 });
 
-// --- グローバル関数登録 (HTMLのonclickから呼ばれる) ---
+// --- 変更通知機能 (バッジ表示) ---
+function notifyChange() {
+  if (searchBtn) searchBtn.classList.add("needs-update");
+  if (retrySearchBtn) retrySearchBtn.classList.add("needs-update");
+}
 
-// 1. 商品の除外 (×ボタン)
+function clearNotification() {
+  if (searchBtn) searchBtn.classList.remove("needs-update");
+  if (retrySearchBtn) retrySearchBtn.classList.remove("needs-update");
+}
+
+// --- グローバル関数登録 ---
+window.toggleDetails = toggleDetails;
+
+// app.js の window.removeSlot 関数のみを修正
+
 window.removeSlot = function (id) {
-  // 既に除外済みなら何もしない
   if (userExcludedIds.has(id)) return;
-
-  // 削除ボタンが押されたら、そのグループの個数指定もクリアする
-  // (これがないと、個数指定されたまま除外され、復活したときに個数が残ってしまう)
-  if (menuGroups) {
-    const group = menuGroups.find((g) => g.id === id);
-    if (group) {
-      group.items.forEach((item) => {
-        if (itemCounts[item.jan]) delete itemCounts[item.jan];
-      });
-    }
-  }
-
-  // 枠固定も解除する
-  if (lockedGroupIds.has(id)) lockedGroupIds.delete(id);
+  userExcludedIds.add(id);
+  lockedGroupIds.delete(id);
 
   const group = menuGroups.find((g) => g.id === id);
-  if (!group) return;
-
-  // 除外リストに追加
-  userExcludedIds.add(id);
-
-  // ★生協商品(COOP)の場合のみ、FIFOロジックを適用
-  if (group.isCoop) {
+  if (group && group.isCoop) {
     coopExcludedQueue.push(id);
-
-    // 上限を超えたら、一番古い生協商品を復活させる
     if (coopExcludedQueue.length > MAX_EXCLUDED_ITEMS) {
-      const oldestId = coopExcludedQueue.shift(); // 先頭（最古）を取り出し
-      userExcludedIds.delete(oldestId); // 除外リストから削除（復活）
+      const oldestId = coopExcludedQueue.shift();
+      userExcludedIds.delete(oldestId);
     }
   }
 
-  runSimulation();
+  currentSuggestion = currentSuggestion.filter((item) => item.id !== id);
+  if (group) {
+    group.items.forEach((item) => {
+      if (itemCounts[item.jan]) delete itemCounts[item.jan];
+    });
+  }
+
+  updateCurrentView();
+
+  // ★修正: リスト削除時も再検索が必要な状態として通知する
+  notifyChange();
 };
 
-// 2. 枠の固定/解除 (南京錠ボタン)
+// ... その他の関数は変更なし ...
+
 window.toggleGroupLock = function (groupId) {
   if (lockedGroupIds.has(groupId)) {
-    lockedGroupIds.delete(groupId); // 解除
+    lockedGroupIds.delete(groupId);
   } else {
-    lockedGroupIds.add(groupId); // 固定
-    userExcludedIds.delete(groupId); // 固定するなら除外リストからは消す
+    lockedGroupIds.add(groupId);
+    userExcludedIds.delete(groupId);
   }
-  runSimulation();
+  updateCurrentView();
+  // ロック変更はバッジ表示の対象外
 };
 
-// 3. 商品個数の変更 (+-ボタン)
 window.updateItemCount = function (groupId, jan, delta) {
   const current = itemCounts[jan] || 0;
   const next = current + delta;
-
-  if (next < 0) return; // マイナスにはしない
+  if (next < 0) return;
 
   itemCounts[jan] = next;
-
-  // 個数が1以上になったら、そのグループは自動的に提案対象にする（除外リストから削除）
   if (next > 0) {
     userExcludedIds.delete(groupId);
   }
 
-  runSimulation();
+  updateCurrentView();
+  // ★個数変更はバッジ表示の対象外
 };
 
-// 4. グループ内の個数リセット
 window.resetGroupItemCounts = function (groupId) {
   const group = menuGroups.find((g) => g.id === groupId);
   if (group) {
@@ -112,56 +135,21 @@ window.resetGroupItemCounts = function (groupId) {
       }
     });
   }
-  runSimulation();
+  updateCurrentView();
+  // リセットはバッジ表示の対象外
 };
 
-// 詳細開閉関数をWindowに登録 (ui.jsからインポートしたもの)
-window.toggleDetails = toggleDetails;
+// --- アクション ---
 
-// --- イベントリスナー ---
-
-// 全リセット（検索ボタン、フィルタ変更、リセットボタン）時に使用
-const resetAllState = () => {
-  userExcludedIds.clear();
-  coopExcludedQueue = []; // FIFOキューもクリア
-};
-
-if (searchBtn) {
-  searchBtn.addEventListener("click", () => {
-    resetAllState();
-    itemCounts = {}; // 個数指定もリセット
-    lockedGroupIds.clear(); // ロックもリセット
-    runSimulation();
-  });
-}
-
-filterInputs.forEach((input) => {
-  input.addEventListener("change", () => {
-    // フィルタ変更時はリセットして再計算
-    resetAllState();
-    runSimulation();
-  });
-});
-
-if (resetExcludedButton) {
-  resetExcludedButton.addEventListener("click", () => {
-    resetAllState();
-    runSimulation();
-    alert("除外した商品を全て戻しました");
-  });
-}
-
-// --- メイン処理 (Simulation) ---
-function runSimulation() {
+function performSearch() {
   if (!isDataLoaded) return;
 
   const balance = parseInt(balanceInput.value, 10);
   if (!balance || balance < 0) {
-    showError("金額を正しく入力してください", resultArea);
+    alert("金額を入力してください");
     return;
   }
 
-  // フィルタ設定の取得
   const filters = {
     bento: document.getElementById("filter-bento")?.checked ?? true,
     onigiri: document.getElementById("filter-onigiri")?.checked ?? true,
@@ -171,13 +159,6 @@ function runSimulation() {
     salad: document.getElementById("filter-salad")?.checked ?? true,
   };
 
-  // 現在開いている詳細エリアを記憶 (UI復元用)
-  const openGroupIds = new Set();
-  document.querySelectorAll('[id^="details-"].open').forEach((el) => {
-    openGroupIds.add(el.id.replace("details-", ""));
-  });
-
-  // 1. 計算 (Logic)
   const result = calculateCombination(
     balance,
     menuGroups,
@@ -187,13 +168,101 @@ function runSimulation() {
     lockedGroupIds
   );
 
-  // 2. 表示 (UI)
+  // ★修正: 提案リストを最大5つのユニークなグループに制限する
+  const limitedSuggestion = [];
+  const groupIds = new Set();
+
+  // result.suggestion は優先順位でソートされているため、前から取るだけでOK
+  for (const item of result.suggestion) {
+    if (groupIds.size >= MAX_SUGGESTIONS_TO_DISPLAY) {
+      break; // 5つに達したら終了
+    }
+    if (!groupIds.has(item.id)) {
+      limitedSuggestion.push(item);
+      groupIds.add(item.id);
+    }
+  }
+
+  currentSuggestion = limitedSuggestion; // 5つに制限したリストを保存
+  updateCurrentView();
+
+  // 検索したらバッジを消す
+  clearNotification();
+}
+
+if (searchBtn) {
+  searchBtn.addEventListener("click", performSearch);
+}
+
+if (retrySearchBtn) {
+  retrySearchBtn.addEventListener("click", () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    performSearch();
+  });
+}
+
+if (resetExcludedButton) {
+  resetExcludedButton.addEventListener("click", () => {
+    userExcludedIds.clear();
+    itemCounts = {};
+    lockedGroupIds.clear();
+    currentSuggestion = [];
+    updateCurrentView();
+
+    resultArea.innerHTML =
+      '<div class="empty-state">リセットしました。<br>「提案」ボタンを押してランチを決めましょう！</div>';
+    document.getElementById("footerTotal").textContent = "¥ 0";
+    document.getElementById("footerRemain").textContent = "¥ 0";
+    document.getElementById("footerStatus").innerHTML = "";
+
+    clearNotification();
+  });
+}
+
+function updateCurrentView() {
+  const balance = parseInt(balanceInput.value, 10) || 0;
+
+  // ★現在開いているアコーディオンのIDを取得して保存
+  const openGroupIds = new Set();
+  document.querySelectorAll(".details-container.open").forEach((el) => {
+    const id = el.id.replace("details-", "");
+    openGroupIds.add(id);
+  });
+
+  const uniqueGroups = [];
+  const groupIds = new Set();
+
+  currentSuggestion.forEach((item) => {
+    if (!groupIds.has(item.id)) {
+      uniqueGroups.push(item);
+      groupIds.add(item.id);
+    }
+  });
+
+  let total = 0;
+  uniqueGroups.forEach((group) => {
+    let countInGroup = 0;
+    let hasExplicitCount = false;
+    group.items.forEach((i) => {
+      const c = itemCounts[i.jan] || 0;
+      if (c > 0) {
+        countInGroup += c;
+        hasExplicitCount = true;
+      }
+    });
+    if (!hasExplicitCount) {
+      countInGroup = 1;
+    }
+    total += group.price * countInGroup;
+  });
+
   renderResults(
-    result,
+    uniqueGroups,
     balance,
     resultArea,
     itemCounts,
     lockedGroupIds,
-    openGroupIds
+    total,
+    openGroupIds // 開閉状態を渡す
   );
 }

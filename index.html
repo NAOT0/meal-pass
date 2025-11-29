@@ -13,77 +13,95 @@
   </head>
   <body>
     <div class="container">
-      <h1>Meal Pass App</h1>
+      <header class="app-header">
+        <div class="logo-text">Meal Pass</div>
+        <div class="sub-text">今日のランチをスマートに</div>
+      </header>
 
-      <!-- 1. フィルタ (市販弁当なし) -->
-      <div class="filter-section">
-        <div class="filter-title">
-          <i class="fas fa-sliders-h"></i> カテゴリ設定
-        </div>
-        <div class="filter-grid">
-          <label class="filter-checkbox"
-            ><input type="checkbox" id="filter-bento" checked /> 🍱
-            内製弁当</label
-          >
-          <label class="filter-checkbox"
-            ><input type="checkbox" id="filter-onigiri" checked /> 🍙
-            おにぎり</label
-          >
-          <label class="filter-checkbox"
-            ><input type="checkbox" id="filter-bread" checked /> 🍞
-            パン類</label
-          >
-          <label class="filter-checkbox"
-            ><input type="checkbox" id="filter-cupmen" checked /> 🍜
-            カップ麺</label
-          >
-          <label class="filter-checkbox"
-            ><input type="checkbox" id="filter-drink" checked /> 🥤
-            飲み物</label
-          >
-          <label class="filter-checkbox"
-            ><input type="checkbox" id="filter-salad" checked /> 🥗
-            サラダ</label
-          >
+      <div class="budget-card">
+        <div class="budget-label">BUDGET LIMIT</div>
+        <div class="budget-row">
+          <div class="currency-symbol">¥</div>
+          <input
+            type="number"
+            id="balanceInput"
+            class="balance-input-large"
+            placeholder="550"
+            value="550"
+          />
+          <button id="searchBtn" class="btn-propose">
+            <i class="fas fa-search"></i> 提案
+          </button>
         </div>
       </div>
 
-      <!-- 2. 入力欄 + 検索ボタン -->
-      <div class="input-group">
-        <span class="input-label">残高:</span>
-        <input
-          type="number"
-          id="balanceInput"
-          class="input-field"
-          placeholder="例: 550"
-        />
-        <button id="searchBtn" class="btn-icon">
-          <i class="fas fa-search"></i>
+      <div class="filter-scroll-area">
+        <button class="filter-pill active" data-target="filter-bento">
+          <i class="fas fa-utensils"></i> 内製弁当
+        </button>
+        <button class="filter-pill active" data-target="filter-onigiri">
+          🍙 おにぎり
+        </button>
+        <button class="filter-pill active" data-target="filter-bread">
+          <i class="fas fa-bread-slice"></i> パン類
+        </button>
+        <button class="filter-pill active" data-target="filter-cupmen">
+          🍜 カップ麺
+        </button>
+        <button class="filter-pill active" data-target="filter-drink">
+          <i class="fas fa-glass-whiskey"></i> 飲み物
+        </button>
+        <button class="filter-pill active" data-target="filter-salad">
+          <i class="fas fa-leaf"></i> サラダ
         </button>
       </div>
 
-      <!-- 3. リセットボタン -->
-      <div class="reset-link-container">
-        <button id="resetExcludedButton">
-          <i class="fas fa-undo"></i> 除外をリセット
+      <div style="display: none">
+        <input type="checkbox" id="filter-bento" checked />
+        <input type="checkbox" id="filter-onigiri" checked />
+        <input type="checkbox" id="filter-bread" checked />
+        <input type="checkbox" id="filter-cupmen" checked />
+        <input type="checkbox" id="filter-drink" checked />
+        <input type="checkbox" id="filter-salad" checked />
+      </div>
+
+      <div class="list-header-row">
+        <h3>おすすめ商品</h3>
+        <button id="resetExcludedButton" class="reset-link">
+          すべてリセット
         </button>
       </div>
 
-      <!-- 4. 結果 -->
-      <div id="resultArea" class="result-area"></div>
-      <footer
-        style="
-          margin-top: 40px;
-          color: #aaa;
-          font-size: 0.8rem;
-          text-align: center;
-        "
-      >
-        @naoto
-      </footer>
+      <div id="resultArea" class="result-area">
+        <div class="empty-state">
+          「提案」ボタンを押して<br />ランチを決めましょう！
+        </div>
+      </div>
+
+      <div class="retry-container">
+        <button id="retrySearchBtn" class="btn-retry">
+          <i class="fas fa-redo"></i> 条件を変更して再検索
+        </button>
+      </div>
+
+      <div style="height: 100px"></div>
     </div>
 
-    <!-- モジュールとして読み込み -->
+    <div class="fixed-footer">
+      <div id="footerStatus" class="footer-status"></div>
+      <div class="footer-row">
+        <div class="total-info">
+          <div class="label">合計金額</div>
+          <div class="value" id="footerTotal">¥ 0</div>
+        </div>
+        <div class="divider"></div>
+        <div class="remain-info">
+          <div class="label">残高</div>
+          <div class="value" id="footerRemain">¥ 0</div>
+        </div>
+      </div>
+    </div>
+
     <script type="module" src="app.js"></script>
   </body>
 </html>
