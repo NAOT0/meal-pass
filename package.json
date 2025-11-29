@@ -3,15 +3,16 @@
   "version": "1.0.0",
   "dependencies": {
     "firebase": "^9.22.0",
-    "@zxing/library": "..."  
+    "@zxing/library": "..."
   },
   "devDependencies": {
     "parcel": "^2.10.3"
   },
   "scripts": {
- 
     "start": "parcel index.html",
-
     "build": "parcel build index.html"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
