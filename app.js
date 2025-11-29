@@ -6,14 +6,15 @@ import { fetchMenuData } from "./api-client.js";
 
 // --- 設定 ---
 const MAX_EXCLUDED_ITEMS = 5;
-const MAX_SUGGESTIONS_TO_DISPLAY = 5; // ★追加: 表示する最大提案数
+// logic.js側でリスト制限を行うため、この定数はここでは使用しませんが、残しておきます。
+const MAX_SUGGESTIONS_TO_DISPLAY = 5;
 
 // --- DOM要素 ---
 const balanceInput = document.getElementById("balanceInput");
 const searchBtn = document.getElementById("searchBtn");
 const resultArea = document.getElementById("resultArea");
 const resetExcludedButton = document.getElementById("resetExcludedButton");
-const retrySearchBtn = document.getElementById("retrySearchBtn");
+const retrySearchBtn = document.getElementById("retrySearchBtn"); // フッターの再検索ボタン
 
 // --- 状態 (State) ---
 let menuGroups = [];
@@ -51,7 +52,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   // 残高変更イベント
   balanceInput.addEventListener("input", () => {
-    // ★金額変更時は通知する
+    // 金額変更時は通知する
     notifyChange();
   });
 });
@@ -70,9 +71,13 @@ function clearNotification() {
 // --- グローバル関数登録 ---
 window.toggleDetails = toggleDetails;
 
-// app.js の window.removeSlot 関数のみを修正
-
 window.removeSlot = function (id) {
+  // ★修正: alert() を削除し、処理を中断するのみにする
+  if (lockedGroupIds.has(id)) {
+    alert("ロックを解除してください。");
+    return; // 削除ができないように処理を中断
+  }
+
   if (userExcludedIds.has(id)) return;
   userExcludedIds.add(id);
   lockedGroupIds.delete(id);
@@ -95,11 +100,9 @@ window.removeSlot = function (id) {
 
   updateCurrentView();
 
-  // ★修正: リスト削除時も再検索が必要な状態として通知する
+  // リスト削除時も再検索が必要な状態として通知する
   notifyChange();
 };
-
-// ... その他の関数は変更なし ...
 
 window.toggleGroupLock = function (groupId) {
   if (lockedGroupIds.has(groupId)) {
@@ -123,7 +126,7 @@ window.updateItemCount = function (groupId, jan, delta) {
   }
 
   updateCurrentView();
-  // ★個数変更はバッジ表示の対象外
+  // 個数変更はバッジ表示の対象外
 };
 
 window.resetGroupItemCounts = function (groupId) {
@@ -168,22 +171,8 @@ function performSearch() {
     lockedGroupIds
   );
 
-  // ★修正: 提案リストを最大5つのユニークなグループに制限する
-  const limitedSuggestion = [];
-  const groupIds = new Set();
-
-  // result.suggestion は優先順位でソートされているため、前から取るだけでOK
-  for (const item of result.suggestion) {
-    if (groupIds.size >= MAX_SUGGESTIONS_TO_DISPLAY) {
-      break; // 5つに達したら終了
-    }
-    if (!groupIds.has(item.id)) {
-      limitedSuggestion.push(item);
-      groupIds.add(item.id);
-    }
-  }
-
-  currentSuggestion = limitedSuggestion; // 5つに制限したリストを保存
+  // logic.js側でランダム制限とユニーク化が行われている
+  currentSuggestion = result.suggestion;
   updateCurrentView();
 
   // 検索したらバッジを消す
@@ -222,7 +211,7 @@ if (resetExcludedButton) {
 function updateCurrentView() {
   const balance = parseInt(balanceInput.value, 10) || 0;
 
-  // ★現在開いているアコーディオンのIDを取得して保存
+  // 現在開いているアコーディオンのIDを取得して保存 (リスト開閉維持のため)
   const openGroupIds = new Set();
   document.querySelectorAll(".details-container.open").forEach((el) => {
     const id = el.id.replace("details-", "");
@@ -250,9 +239,11 @@ function updateCurrentView() {
         hasExplicitCount = true;
       }
     });
+    // 個数指定がない場合は1個として扱う（提案リストに含まれているため）
     if (!hasExplicitCount) {
       countInGroup = 1;
     }
+    // group.price * countInGroupは、個数指定された商品も考慮した正しい合計価格
     total += group.price * countInGroup;
   });
 

@@ -92,6 +92,7 @@ body {
   cursor: pointer;
   box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
   transition: transform 0.1s;
+  position: relative; /* バッジの位置基準 */
 }
 .btn-propose:active {
   transform: scale(0.95);
@@ -291,6 +292,21 @@ body {
   border-color: #fecaca;
 }
 
+/* ★追加: 無効化されたアクションボタン (ロック時) */
+.disabled-action {
+  opacity: 0.5;
+  pointer-events: all;
+  cursor: default;
+}
+.disabled-action:hover {
+  background: none !important;
+  transform: none !important;
+}
+.disabled-action.remove-btn:hover {
+  background-color: transparent !important;
+  color: #9ca3af !important;
+}
+
 /* 矢印アイコン */
 .chevron-icon {
   color: #9ca3af;
@@ -459,15 +475,8 @@ body {
   border-radius: 8px;
   text-align: center;
 }
-/* --- style.css 既存コードの下に追加 --- */
 
-/* ★バッジ機能 (再検索が必要なときに表示) */
-.btn-propose,
-.btn-retry {
-  position: relative; /* バッジの位置基準 */
-}
-
-/* バッジのスタイル (赤い丸に！) */
+/* ★追加: バッジ機能 (再検索が必要なときに表示) */
 .needs-update::after {
   content: "!";
   position: absolute;
@@ -497,7 +506,7 @@ body {
   }
 }
 
-/* ★下部の再検索ボタンコンテナ */
+/* 下部の再検索ボタンコンテナ */
 .retry-container {
   margin-top: 20px;
   text-align: center;
@@ -515,8 +524,9 @@ body {
   cursor: pointer;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   transition: all 0.2s;
-  width: 100%; /* スマホなら幅いっぱいでも押しやすい */
+  width: 100%;
   max-width: 300px;
+  position: relative;
 }
 
 .btn-retry:hover {
@@ -527,41 +537,4 @@ body {
 
 .btn-retry:active {
   transform: translateY(0);
-}
-/* --- style.css の任意の場所に追加 --- */
-
-/* ★バッジ機能 (再検索が必要なときに表示) */
-.btn-propose,
-.btn-retry {
-  position: relative; /* バッジの位置基準 */
-}
-
-/* バッジのスタイル (赤い丸に！) */
-.needs-update::after {
-  content: "!";
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  width: 20px;
-  height: 20px;
-  background-color: #ef4444; /* 赤色 */
-  color: white;
-  border-radius: 50%;
-  font-size: 12px;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  animation: bounce 0.5s ease-in-out infinite alternate;
-}
-
-@keyframes bounce {
-  from {
-    transform: translateY(0);
-  }
-  to {
-    transform: translateY(-3px);
-  }
 }

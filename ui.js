@@ -1,6 +1,6 @@
 // ui.js
 
-// ★追加: logic.js から shuffle 関数をコピー
+// ★追加: logic.js から shuffle 関数をコピー (詳細アイテムのランダム表示用)
 function shuffle(array) {
   const newArray = [...array];
   for (let i = newArray.length - 1; i > 0; i--) {
@@ -17,13 +17,13 @@ export function renderResults(
   itemCounts,
   lockedGroupIds,
   calculatedTotal,
-  openGroupIds = new Set()
+  openGroupIds = new Set() // app.jsから渡される開閉状態
 ) {
   const footerTotal = document.getElementById("footerTotal");
   const footerRemain = document.getElementById("footerRemain");
   const footerStatus = document.getElementById("footerStatus");
 
-  // フッター更新
+  // --- フッター更新 ---
   footerTotal.textContent = `¥ ${calculatedTotal.toLocaleString()}`;
   const remain = balance - calculatedTotal;
   footerRemain.textContent = `¥ ${remain.toLocaleString()}`;
@@ -36,7 +36,7 @@ export function renderResults(
     footerStatus.innerHTML = "";
   }
 
-  // リストが空の場合
+  // --- リスト描画 ---
   if (!suggestionList || suggestionList.length === 0) {
     resultArea.innerHTML = `<div class="empty-state">選択された商品はありません</div>`;
     return;
@@ -56,6 +56,10 @@ export function renderResults(
       ? "details-container open"
       : "details-container";
 
+    // ★修正: おにぎり(ONIGIRI)の場合に絵文字を適用
+    const itemIconContent =
+      group.type === "ONIGIRI" ? "🍙" : `<i class="${iconClass}"></i>`; // 他のタイプはFont Awesomeを継続利用
+
     // 名前の決定
     let displayName = group.name || "";
     if (group.type === "ONIGIRI") {
@@ -70,6 +74,7 @@ export function renderResults(
       }
     }
 
+    // 個数計算
     let totalCountInGroup = 0;
     if (group.items) {
       group.items.forEach((i) => {
@@ -104,17 +109,15 @@ export function renderResults(
             </div>
         `;
     }
-    // パターンC: 通常商品で、中身がある場合 (お菓子など)
+    // パターンC: 通常商品で、中身がある場合
     else if (group.items && group.items.length > 0) {
       hasDetails = true;
 
-      // ★★★ 修正箇所: アイテムリストをシャッフルして5個に制限 ★★★
+      // アイテムリストをシャッフルして5個に制限
       let itemsToDisplay = group.items;
       if (group.items.length > 5) {
-        // シャッフルしてから先頭5件を取得
         itemsToDisplay = shuffle(group.items).slice(0, 5);
       }
-      // ★★★ 修正箇所 終わり ★★★
 
       const itemsRows = itemsToDisplay
         .map((item) => {
@@ -150,6 +153,9 @@ export function renderResults(
       ? `<i class="fas fa-chevron-down chevron-icon" id="chevron-${group.id}" ${chevronStyle}></i>`
       : ``;
 
+    // ロック時の削除ボタン無効化
+    const isRemoveDisabled = isLocked ? "disabled-action" : "";
+
     html += `
       <div class="item-card-wrapper">
         <div class="item-card ${
@@ -157,7 +163,7 @@ export function renderResults(
         }" onclick="window.toggleDetails('${group.id}')">
           <div class="card-left">
             <div class="item-icon-box">
-              <i class="${iconClass}"></i>
+              ${itemIconContent}
               ${coopBadge}
             </div>
             <div class="item-details">
@@ -185,9 +191,9 @@ export function renderResults(
               }" onclick="window.toggleGroupLock('${group.id}')">
                 <i class="fas ${isLocked ? "fa-lock" : "fa-lock-open"}"></i>
               </button>
-              <button class="btn-icon-small remove-btn" onclick="window.removeSlot('${
-                group.id
-              }')">
+              <button class="btn-icon-small remove-btn ${isRemoveDisabled}" onclick="window.removeSlot('${
+      group.id
+    }')">
                 <i class="fas fa-times"></i>
               </button>
             </div>
@@ -203,6 +209,7 @@ export function renderResults(
 
   resultArea.innerHTML = html;
 
+  // 描画後、Open状態のものの高さを設定して開いた状態にする (開閉維持)
   if (openGroupIds.size > 0) {
     openGroupIds.forEach((id) => {
       const el = document.getElementById(`details-${id}`);
@@ -213,6 +220,7 @@ export function renderResults(
   }
 }
 
+// 詳細開閉のための関数
 export function toggleDetails(id) {
   const el = document.getElementById(`details-${id}`);
   const chevron = document.getElementById(`chevron-${id}`);
