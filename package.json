@@ -2,6 +2,7 @@
   "name": "meal-pass-app",
   "version": "1.0.0",
   "dependencies": {
+    "@zxing/library": "^0.21.3",
     "firebase": "^9.22.0"
   }
 }

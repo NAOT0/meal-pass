@@ -3,6 +3,11 @@
 import { calculateCombination } from "./logic.js";
 import { renderResults, showError, toggleDetails } from "./ui.js";
 import { fetchMenuData } from "./api-client.js";
+// ▼▼▼ 追加: バーコードリーダーライブラリ (CDN経由) ▼▼▼
+import {
+  BrowserMultiFormatReader,
+  NotFoundException,
+} from "https://unpkg.com/@zxing/library@latest/esm/index.js";
 
 // --- 設定 ---
 const MAX_EXCLUDED_ITEMS = 5;
@@ -16,6 +21,11 @@ const resultArea = document.getElementById("resultArea");
 const resetExcludedButton = document.getElementById("resetExcludedButton");
 const retrySearchBtn = document.getElementById("retrySearchBtn"); // フッターの再検索ボタン
 
+// ▼▼▼ 追加: スキャン関連のDOM要素 ▼▼▼
+const scanBtn = document.getElementById("scanBtn");
+const scannerContainer = document.getElementById("scannerContainer");
+const stopScanBtn = document.getElementById("stopScanBtn");
+
 // --- 状態 (State) ---
 let menuGroups = [];
 let isDataLoaded = false;
@@ -24,6 +34,10 @@ let itemCounts = {};
 let lockedGroupIds = new Set();
 let coopExcludedQueue = [];
 let currentSuggestion = [];
+
+// ▼▼▼ 追加: コードリーダーのインスタンス作成 ▼▼▼
+const codeReader = new BrowserMultiFormatReader();
+let activeScanControls = null;
 
 // --- 初期化 ---
 window.addEventListener("DOMContentLoaded", async () => {
@@ -72,7 +86,6 @@ function clearNotification() {
 window.toggleDetails = toggleDetails;
 
 window.removeSlot = function (id) {
-  // ★修正: alert() を削除し、処理を中断するのみにする
   if (lockedGroupIds.has(id)) {
     alert("ロックを解除してください。");
     return; // 削除ができないように処理を中断
@@ -256,4 +269,100 @@ function updateCurrentView() {
     total,
     openGroupIds // 開閉状態を渡す
   );
+}
+
+// ---------------------------------------------------------
+// ▼▼▼ 追加: JANコードスキャン機能の実装 ▼▼▼
+// ---------------------------------------------------------
+
+if (scanBtn) {
+  scanBtn.addEventListener("click", startScanning);
+}
+
+if (stopScanBtn) {
+  stopScanBtn.addEventListener("click", stopScanning);
+}
+
+// カメラ起動とスキャン開始関数
+function startScanning() {
+  // UIの切り替え
+  scanBtn.style.display = "none";
+  scannerContainer.style.display = "block";
+  // 一時的にローディング表示などしてもよいですが、UIがずれないように今回はそのまま
+
+  // JANコード(EAN-13)などを読み取る
+  codeReader
+    .decodeFromVideoDevice(null, "video", (result, err) => {
+      // 読み取り成功時
+      if (result) {
+        console.log("Found Code:", result.text);
+        handleJanScanSuccess(result.text); // ★連携処理呼び出し
+        stopScanning(); // 読み取れたらカメラを止める
+      }
+      // エラーハンドリング (読み取り待機中はNotFoundExceptionが頻発するので無視してOK)
+      if (err && !(err instanceof NotFoundException)) {
+        console.error(err);
+      }
+    })
+    .then((controls) => {
+      activeScanControls = controls;
+    })
+    .catch((err) => {
+      console.error(err);
+      alert(
+        "カメラの起動に失敗しました。カメラへのアクセスを許可してください。"
+      );
+      stopScanning();
+    });
+}
+
+// スキャン停止関数
+function stopScanning() {
+  if (activeScanControls) {
+    activeScanControls.stop();
+    activeScanControls = null;
+  }
+  scannerContainer.style.display = "none";
+  scanBtn.style.display = "inline-block";
+}
+
+// 読み取ったJANコードをアプリに反映するロジック
+function handleJanScanSuccess(scannedJan) {
+  // 1. 全データからJANコードが一致する商品を探す
+  let foundItem = null;
+  let targetGroupId = null;
+
+  for (const group of menuGroups) {
+    const item = group.items.find((i) => i.jan === scannedJan);
+    if (item) {
+      foundItem = item;
+      targetGroupId = group.id;
+      break;
+    }
+  }
+
+  if (!foundItem) {
+    alert(
+      `JANコード: ${scannedJan}\nこの商品はメニューに見つかりませんでした。`
+    );
+    return;
+  }
+
+  // 2. カウントアップ処理 (手動で＋ボタンを押したのと同じ扱いにする)
+  const currentCount = itemCounts[scannedJan] || 0;
+  itemCounts[scannedJan] = currentCount + 1;
+
+  // もし除外リストに入っていたら削除 (ユーザーが意図して選んだため)
+  if (userExcludedIds.has(targetGroupId)) {
+    userExcludedIds.delete(targetGroupId);
+  }
+
+  // 3. UI更新と再計算を実行
+  updateCurrentView();
+
+  // バッジなどをクリア
+  clearNotification();
+
+  // ユーザーへのフィードバック(任意)
+  // alert(`${foundItem.name} を追加しました`);
 }
