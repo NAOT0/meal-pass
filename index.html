@@ -57,11 +57,13 @@
           <p style="font-size: 0.8rem; color: #666; margin-bottom: 5px">
             バーコードをカメラに向けてください
           </p>
+
           <div
             style="
               position: relative;
               width: 100%;
-              max-width: 300px;
+              max-width: 240px; /* 横幅 */
+              height: 150px; /* ★縦幅を150pxに固定 */
               margin: 0 auto;
               overflow: hidden;
               border-radius: 8px;
@@ -70,11 +72,14 @@
           >
             <video
               id="video"
-              width="100%"
-              height="auto"
-              style="display: block"
+              style="
+                width: 100%;
+                height: 100%;
+                object-fit: cover; /* ★枠に合わせて映像をトリミング（拡大して埋める） */
+              "
             ></video>
           </div>
+
           <button
             id="stopScanBtn"
             class="reset-link"
