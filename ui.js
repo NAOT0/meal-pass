@@ -56,9 +56,9 @@ export function renderResults(
       ? "details-container open"
       : "details-container";
 
-    // ★修正: おにぎり(ONIGIRI)の場合に絵文字を適用
+    // アイコン決定: おにぎり(ONIGIRI)の場合に絵文字を適用
     const itemIconContent =
-      group.type === "ONIGIRI" ? "🍙" : `<i class="${iconClass}"></i>`; // 他のタイプはFont Awesomeを継続利用
+      group.type === "ONIGIRI" ? "🍙" : `<i class="${iconClass}"></i>`;
 
     // 名前の決定
     let displayName = group.name || "";
@@ -82,6 +82,24 @@ export function renderResults(
       });
     }
     if (totalCountInGroup === 0) totalCountInGroup = 1;
+
+    // ★修正: 価格表示のHTMLを調整 (合計金額表示)
+    let priceDisplayHtml = `<div class="card-item-price">¥${group.price}</div>`;
+
+    // 個数が1より大きい、またはロックされている場合に合計金額も表示
+    if (totalCountInGroup > 1 || isLocked) {
+      const itemTotal = group.price * totalCountInGroup;
+      // 既存の単価表示の下に、合計金額を追加
+      priceDisplayHtml = `
+          <div class="card-item-price" style="color:#555; font-weight:400; font-size:0.8rem;">単価: ¥${group.price}</div>
+          <div class="card-item-price">合計: ¥${itemTotal}</div>
+        `;
+    }
+    // 個数が1の場合の表示を調整 (単価のみ表示)
+    else if (totalCountInGroup === 1) {
+      priceDisplayHtml = `<div class="card-item-price">¥${group.price}</div>`;
+    }
+    // ★修正箇所終わり
 
     let detailsHtml = "";
     let hasDetails = false;
@@ -168,7 +186,7 @@ export function renderResults(
             </div>
             <div class="item-details">
               <div class="card-item-name">${displayName}</div>
-              <div class="card-item-price">¥${group.price}</div>
+              ${priceDisplayHtml}
             </div>
           </div>
           <div class="card-right">
