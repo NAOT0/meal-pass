@@ -3,12 +3,8 @@
 import { calculateCombination } from "./logic.js";
 import { renderResults, showError, toggleDetails } from "./ui.js";
 import { fetchMenuData } from "./api-client.js";
-// ▼▼▼ 追加: バーコードリーダーライブラリ (CDN経由) ▼▼▼
-import {
-  BrowserMultiFormatReader,
-  NotFoundException,
-} from "https://unpkg.com/@zxing/library@latest/esm/index.js";
-
+// ▼▼▼ 修正後: パッケージ名をそのまま記述します ▼▼▼
+import { BrowserMultiFormatReader, NotFoundException } from "@zxing/library";
 // --- 設定 ---
 const MAX_EXCLUDED_ITEMS = 5;
 // logic.js側でリスト制限を行うため、この定数はここでは使用しませんが、残しておきます。

@@ -1,6 +1,12 @@
-.vercel
-# Node
-node_modules
+# 1. 依存関係のフォルダとロックファイル (Git操作を遅くする主要因)
+node_modules/
+package-lock.json
+
+# 2. ビルド生成物とキャッシュファイル (自動生成されるもの)
 /dist
 /build
+.parcel-cache
+
+# 3. 設定・環境ファイル
+.vercel
 .env
