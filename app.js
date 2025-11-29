@@ -4,6 +4,8 @@ import { calculateCombination } from "./logic.js";
 import { renderResults, showError, toggleDetails } from "./ui.js";
 import { fetchMenuData } from "./api-client.js";
 
+// CDNで読み込んだライブラリを使うため、importは不要
+
 // --- 設定 ---
 const MAX_EXCLUDED_ITEMS = 5;
 
@@ -14,11 +16,10 @@ const resultArea = document.getElementById("resultArea");
 const resetExcludedButton = document.getElementById("resetExcludedButton");
 const retrySearchBtn = document.getElementById("retrySearchBtn");
 
-// ▼▼▼ カメラ用DOM要素の取得 ▼▼▼
+// カメラ用DOM要素
 const scanBtn = document.getElementById("scanBtn");
 const scannerContainer = document.getElementById("scannerContainer");
 const stopScanBtn = document.getElementById("stopScanBtn");
-const videoElement = document.getElementById("video");
 
 // --- 状態 (State) ---
 let menuGroups = [];
@@ -29,9 +30,8 @@ let lockedGroupIds = new Set();
 let coopExcludedQueue = [];
 let currentSuggestion = [];
 
-// ▼▼▼ カメラ用変数 ▼▼▼
-let codeReader = null;
-let activeStream = null;
+// カメラ用変数
+let codeReader = null; // window.ZXing.BrowserMultiFormatReaderのインスタンスが入る
 
 // --- 初期化 ---
 window.addEventListener("DOMContentLoaded", async () => {
@@ -60,13 +60,14 @@ window.addEventListener("DOMContentLoaded", async () => {
     notifyChange();
   });
 
-  // ▼▼▼ ライブラリの準備 ▼▼▼
-  // HTMLのscriptタグで読み込まれた ZXing があるか確認
+  // ▼▼▼ カメラ用ライブラリの準備 ▼▼▼
   if (typeof ZXing !== "undefined") {
+    // ZXingライブラリがHTMLで読み込まれていることを確認
     codeReader = new ZXing.BrowserMultiFormatReader();
     console.log("ZXing library initialized");
   } else {
-    console.error("ZXing library not found");
+    // ライブラリがロードされていない場合、検索ボタンを押すまでは静かにエラーとする
+    console.warn("ZXing library not found (check index.html script tag)");
   }
 });
 
@@ -81,8 +82,9 @@ function clearNotification() {
   if (retrySearchBtn) retrySearchBtn.classList.remove("needs-update");
 }
 
-// --- グローバル関数登録 ---
+// --- グローバル関数登録（省略） ---
 window.toggleDetails = toggleDetails;
+
 window.removeSlot = function (id) {
   if (lockedGroupIds.has(id)) {
     alert("ロックを解除してください。");
@@ -105,7 +107,7 @@ window.removeSlot = function (id) {
       if (itemCounts[item.jan]) delete itemCounts[item.jan];
     });
   }
-  updateCurrentView();
+  recalculateAndRender(); // 枠の削除後も再計算が必要です
   notifyChange();
 };
 
@@ -116,7 +118,7 @@ window.toggleGroupLock = function (groupId) {
     lockedGroupIds.add(groupId);
     userExcludedIds.delete(groupId);
   }
-  updateCurrentView();
+  recalculateAndRender(); // ロック変更後も再計算が必要です
 };
 
 window.updateItemCount = function (groupId, jan, delta) {
@@ -127,7 +129,7 @@ window.updateItemCount = function (groupId, jan, delta) {
   if (next > 0) {
     userExcludedIds.delete(groupId);
   }
-  updateCurrentView();
+  recalculateAndRender(); // 個数変更後も再計算が必要です
 };
 
 window.resetGroupItemCounts = function (groupId) {
@@ -137,17 +139,26 @@ window.resetGroupItemCounts = function (groupId) {
       if (itemCounts[item.jan]) delete itemCounts[item.jan];
     });
   }
-  updateCurrentView();
+  recalculateAndRender(); // リセット後も再計算が必要です
 };
 
-// --- 検索アクション ---
-function performSearch() {
-  if (!isDataLoaded) return;
-  const balance = parseInt(balanceInput.value, 10);
-  if (!balance || balance < 0) {
-    alert("金額を入力してください");
+// ---------------------------------------------------------
+// ▼▼▼ 修正・追加: 再計算処理を独立させる ▼▼▼
+// ---------------------------------------------------------
+
+/**
+ * 現在の状態（残高、個数指定、フィルター）に基づいて組み合わせを計算し、
+ * 結果を画面にレンダリングする
+ */
+function recalculateAndRender() {
+  const balance = parseInt(balanceInput.value, 10) || 0;
+
+  if (!isDataLoaded || !balance) {
+    // データ未ロード、または残高なしの場合は再計算しない
+    updateCurrentView(0, 0);
     return;
   }
+
   const filters = {
     bento: document.getElementById("filter-bento")?.checked ?? true,
     onigiri: document.getElementById("filter-onigiri")?.checked ?? true,
@@ -166,12 +177,35 @@ function performSearch() {
     lockedGroupIds
   );
 
+  // logic.js側でランダム制限とユニーク化が行われている
   currentSuggestion = result.suggestion;
-  updateCurrentView();
+
+  // 画面更新を行う
+  updateCurrentView(result.total, balance);
+}
+
+// --- アクション ---
+
+function performSearch() {
+  const balance = parseInt(balanceInput.value, 10);
+  if (!balance || balance < 0) {
+    alert("金額を入力してください");
+    return;
+  }
+
+  recalculateAndRender();
+
+  // 検索したらバッジを消す
   clearNotification();
 }
 
-if (searchBtn) searchBtn.addEventListener("click", performSearch);
+// ---------------------------------------------------------
+// ▲▲▲ 修正・追加ここまで ▲▲▲
+// ---------------------------------------------------------
+
+if (searchBtn) {
+  searchBtn.addEventListener("click", performSearch);
+}
 
 if (retrySearchBtn) {
   retrySearchBtn.addEventListener("click", () => {
@@ -186,26 +220,35 @@ if (resetExcludedButton) {
     itemCounts = {};
     lockedGroupIds.clear();
     currentSuggestion = [];
-    updateCurrentView();
+
+    // リセット時は updateCurrentView に 0 を渡してフッターをクリア
+    updateCurrentView(0, 0);
+
     resultArea.innerHTML =
       '<div class="empty-state">リセットしました。<br>「提案」ボタンを押してランチを決めましょう！</div>';
-    document.getElementById("footerTotal").textContent = "¥ 0";
-    document.getElementById("footerRemain").textContent = "¥ 0";
-    document.getElementById("footerStatus").innerHTML = "";
+
     clearNotification();
   });
 }
 
-function updateCurrentView() {
-  const balance = parseInt(balanceInput.value, 10) || 0;
+/**
+ * 画面表示を更新するメインのレンダリング関数
+ */
+function updateCurrentView(calculatedTotal, balance) {
+  calculatedTotal = calculatedTotal || 0;
+  balance = balance || 0;
+
+  // 現在開いているアコーディオンのIDを取得して保存 (リスト開閉維持のため)
   const openGroupIds = new Set();
   document.querySelectorAll(".details-container.open").forEach((el) => {
     const id = el.id.replace("details-", "");
     openGroupIds.add(id);
   });
 
+  // currentSuggestionからユニークなグループを抽出
   const uniqueGroups = [];
   const groupIds = new Set();
+
   currentSuggestion.forEach((item) => {
     if (!groupIds.has(item.id)) {
       uniqueGroups.push(item);
@@ -213,20 +256,7 @@ function updateCurrentView() {
     }
   });
 
-  let total = 0;
-  uniqueGroups.forEach((group) => {
-    let countInGroup = 0;
-    let hasExplicitCount = false;
-    group.items.forEach((i) => {
-      const c = itemCounts[i.jan] || 0;
-      if (c > 0) {
-        countInGroup += c;
-        hasExplicitCount = true;
-      }
-    });
-    if (!hasExplicitCount) countInGroup = 1;
-    total += group.price * countInGroup;
-  });
+  // (注: totalの計算は recalculateAndRender で行われた total を使用する)
 
   renderResults(
     uniqueGroups,
@@ -234,8 +264,8 @@ function updateCurrentView() {
     resultArea,
     itemCounts,
     lockedGroupIds,
-    total,
-    openGroupIds
+    calculatedTotal, // recalculateAndRenderで計算された合計金額を渡す
+    openGroupIds // 開閉状態を渡す
   );
 }
 
@@ -266,31 +296,25 @@ function startScanning() {
   scannerContainer.style.display = "block";
 
   // カメラを起動してデコード開始
-  // null = 最初のカメラ, video = <video>のID
   codeReader
     .decodeFromVideoDevice(null, "video", (result, err) => {
       if (result) {
         console.log("Scanned:", result.text);
-        // 成功時の音など鳴らしてもOK
         handleJanScanSuccess(result.text);
         stopScanning();
       }
-      // エラーはコンソールに出るが、スキャン中は頻発するので無視してOK
-    })
-    .then((controls) => {
-      // 停止用にコントロールを保持などはライブラリが内部管理する場合もあるが
-      // 今回は単純に reset() で止める
     })
     .catch((err) => {
       console.error(err);
-      alert("カメラの起動に失敗しました。");
+      alert(
+        "カメラの起動に失敗しました。カメラへのアクセスを許可してください。"
+      );
       stopScanning();
     });
 }
 
 function stopScanning() {
   if (codeReader) {
-    // スキャン停止・カメラ解放
     codeReader.reset();
   }
   scannerContainer.style.display = "none";
@@ -316,7 +340,7 @@ function handleJanScanSuccess(scannedJan) {
     return;
   }
 
-  // カウントアップ
+  // 1. カウントアップ
   const currentCount = itemCounts[scannedJan] || 0;
   itemCounts[scannedJan] = currentCount + 1;
 
@@ -324,10 +348,9 @@ function handleJanScanSuccess(scannedJan) {
     userExcludedIds.delete(targetGroupId);
   }
 
-  // 再計算
-  updateCurrentView();
-  clearNotification();
+  // 2. 最も重要な修正: 再計算を実行する
+  recalculateAndRender(); // <--- ここで新しいリストが生成されます
 
-  // ユーザーへのフィードバック（任意）
-  // alert(`${foundItem.name} を追加しました`);
+  // 3. バッジをクリア
+  clearNotification();
 }
