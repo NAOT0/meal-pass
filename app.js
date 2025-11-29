@@ -19,8 +19,8 @@ const retrySearchBtn = document.getElementById("retrySearchBtn");
 const scanBtn = document.getElementById("scanBtn");
 const scannerContainer = document.getElementById("scannerContainer");
 const stopScanBtn = document.getElementById("stopScanBtn");
-// オーバーレイ要素 (index.htmlに追加済みであること)
-const overlayElement = document.getElementById("scanOverlay");
+// トースト要素
+const toastElement = document.getElementById("toast");
 
 // --- 状態 (State) ---
 let menuGroups = [];
@@ -330,7 +330,7 @@ function handleJanScanSuccess(scannedJan) {
 
   if (!foundItem) {
     console.warn(`JAN not found: ${scannedJan}`);
-    showOverlayMessage("見つかりません", "error");
+    showToast("メニューに見つかりません", "error");
     return;
   }
 
@@ -347,26 +347,26 @@ function handleJanScanSuccess(scannedJan) {
   recalculateAndRender();
   clearNotification();
 
-  // カメラ枠内にメッセージを表示
-  showOverlayMessage(foundItem.name);
+  // トースト表示
+  showToast(`${foundItem.name} を追加しました`);
 }
 
-// カメラ枠内オーバーレイ表示関数
-function showOverlayMessage(message, type = "success") {
-  const overlay = document.getElementById("scanOverlay");
-  if (!overlay) return;
+// トースト表示関数
+function showToast(message, type = "success") {
+  const toast = document.getElementById("toast");
+  if (!toast) return;
 
-  overlay.textContent = message;
+  toast.textContent = message;
 
   if (type === "error") {
-    overlay.style.backgroundColor = "rgba(255, 0, 0, 0.6)";
+    toast.style.backgroundColor = "#ef4444";
   } else {
-    overlay.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+    toast.style.backgroundColor = "#333";
   }
 
-  overlay.classList.add("show");
+  toast.classList.add("show");
 
   setTimeout(() => {
-    overlay.classList.remove("show");
-  }, 800);
+    toast.classList.remove("show");
+  }, 2500);
 }
