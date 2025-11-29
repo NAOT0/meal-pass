@@ -1,6 +1,6 @@
 // ui.js
 
-// ★追加: logic.js から shuffle 関数をコピー (詳細アイテムのランダム表示用)
+// シャッフル関数 (詳細アイテム用)
 function shuffle(array) {
   const newArray = [...array];
   for (let i = newArray.length - 1; i > 0; i--) {
@@ -17,7 +17,8 @@ export function renderResults(
   itemCounts,
   lockedGroupIds,
   calculatedTotal,
-  openGroupIds = new Set() // app.jsから渡される開閉状態
+  openGroupIds = new Set(),
+  scannedJanCodes = new Set() // 追加: スキャン済みリスト
 ) {
   const footerTotal = document.getElementById("footerTotal");
   const footerRemain = document.getElementById("footerRemain");
@@ -56,23 +57,47 @@ export function renderResults(
       ? "details-container open"
       : "details-container";
 
-    // アイコン決定: おにぎり(ONIGIRI)の場合に絵文字を適用
     const itemIconContent =
       group.type === "ONIGIRI" ? "🍙" : `<i class="${iconClass}"></i>`;
 
-    // 名前の決定
+    // ---------------------------------------------------------------
+    // ▼▼▼ 名前決定ロジック (スキャン判定あり) ▼▼▼
+    // ---------------------------------------------------------------
     let displayName = group.name || "";
-    if (group.type === "ONIGIRI") {
-      displayName = "おにぎり";
-    } else if (!displayName) {
-      if (group.items && group.items.length === 1) {
-        displayName = group.items[0].name;
-      } else if (group.rawLabel) {
-        displayName = group.rawLabel;
+
+    // カウントが1以上の商品を取得
+    const activeItems = group.items
+      ? group.items.filter((i) => (itemCounts[i.jan] || 0) > 0)
+      : [];
+
+    if (activeItems.length > 0) {
+      // 条件: 1種類だけ選ばれている AND その商品がスキャン経由である
+      const isScannedItem =
+        activeItems.length === 1 && scannedJanCodes.has(activeItems[0].jan);
+
+      if (isScannedItem) {
+        // スキャンされた商品なら具体的な名前を表示
+        displayName = activeItems[0].name;
       } else {
-        displayName = "商品名なし";
+        // 手動選択、または複数種類混ざっている場合はグループ名
+        if (group.type === "ONIGIRI") displayName = "おにぎり";
+        if (!displayName) displayName = `${group.items[0].name} 他`;
+      }
+    } else {
+      // 提案（ランダム表示）の場合
+      if (group.type === "ONIGIRI") {
+        displayName = "おにぎり";
+      } else if (!displayName) {
+        if (group.items && group.items.length === 1) {
+          displayName = group.items[0].name;
+        } else if (group.rawLabel) {
+          displayName = group.rawLabel;
+        } else {
+          displayName = "商品名なし";
+        }
       }
     }
+    // ---------------------------------------------------------------
 
     // 個数計算
     let totalCountInGroup = 0;
@@ -83,28 +108,21 @@ export function renderResults(
     }
     if (totalCountInGroup === 0) totalCountInGroup = 1;
 
-    // ★修正: 価格表示のHTMLを調整 (合計金額表示)
     let priceDisplayHtml = `<div class="card-item-price">¥${group.price}</div>`;
 
-    // 個数が1より大きい、またはロックされている場合に合計金額も表示
     if (totalCountInGroup > 1 || isLocked) {
       const itemTotal = group.price * totalCountInGroup;
-      // 既存の単価表示の下に、合計金額を追加
       priceDisplayHtml = `
           <div class="card-item-price" style="color:#555; font-weight:400; font-size:0.8rem;">単価: ¥${group.price}</div>
           <div class="card-item-price">合計: ¥${itemTotal}</div>
         `;
-    }
-    // 個数が1の場合の表示を調整 (単価のみ表示)
-    else if (totalCountInGroup === 1) {
+    } else if (totalCountInGroup === 1) {
       priceDisplayHtml = `<div class="card-item-price">¥${group.price}</div>`;
     }
-    // ★修正箇所終わり
 
     let detailsHtml = "";
     let hasDetails = false;
 
-    // パターンA: おにぎりの場合
     if (group.type === "ONIGIRI") {
       hasDetails = true;
       detailsHtml = `
@@ -117,21 +135,15 @@ export function renderResults(
            </button>
         </div>
       `;
-    }
-    // パターンB: 内製弁当の場合
-    else if (group.type === "BENTO") {
+    } else if (group.type === "BENTO") {
       hasDetails = true;
       detailsHtml = `
             <div class="detail-message">
               <i class="fas fa-info-circle"></i> 種類は店頭で選んでください。
             </div>
         `;
-    }
-    // パターンC: 通常商品で、中身がある場合
-    else if (group.items && group.items.length > 0) {
+    } else if (group.items && group.items.length > 0) {
       hasDetails = true;
-
-      // アイテムリストをシャッフルして5個に制限
       let itemsToDisplay = group.items;
       if (group.items.length > 5) {
         itemsToDisplay = shuffle(group.items).slice(0, 5);
@@ -171,7 +183,6 @@ export function renderResults(
       ? `<i class="fas fa-chevron-down chevron-icon" id="chevron-${group.id}" ${chevronStyle}></i>`
       : ``;
 
-    // ロック時の削除ボタン無効化
     const isRemoveDisabled = isLocked ? "disabled-action" : "";
 
     html += `
@@ -227,7 +238,6 @@ export function renderResults(
 
   resultArea.innerHTML = html;
 
-  // 描画後、Open状態のものの高さを設定して開いた状態にする (開閉維持)
   if (openGroupIds.size > 0) {
     openGroupIds.forEach((id) => {
       const el = document.getElementById(`details-${id}`);
@@ -238,7 +248,6 @@ export function renderResults(
   }
 }
 
-// 詳細開閉のための関数
 export function toggleDetails(id) {
   const el = document.getElementById(`details-${id}`);
   const chevron = document.getElementById(`chevron-${id}`);

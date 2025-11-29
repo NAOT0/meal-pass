@@ -6,7 +6,7 @@ import { fetchMenuData } from "./api-client.js";
 
 // --- 設定 ---
 const MAX_EXCLUDED_ITEMS = 5;
-const SCAN_INTERVAL = 1500;
+const SCAN_INTERVAL = 1500; // 連続スキャンの間隔(ms)
 
 // --- DOM要素 ---
 const balanceInput = document.getElementById("balanceInput");
@@ -19,8 +19,8 @@ const retrySearchBtn = document.getElementById("retrySearchBtn");
 const scanBtn = document.getElementById("scanBtn");
 const scannerContainer = document.getElementById("scannerContainer");
 const stopScanBtn = document.getElementById("stopScanBtn");
-// ▼▼▼ 通知用要素の取得 (HTMLに追加します) ▼▼▼
-const toastElement = document.getElementById("toast");
+// オーバーレイ要素 (index.htmlに追加済みであること)
+const overlayElement = document.getElementById("scanOverlay");
 
 // --- 状態 (State) ---
 let menuGroups = [];
@@ -30,6 +30,9 @@ let itemCounts = {};
 let lockedGroupIds = new Set();
 let coopExcludedQueue = [];
 let currentSuggestion = [];
+
+// スキャン経由で追加されたJANコードを記録
+let scannedJanCodes = new Set();
 
 // カメラ用変数
 let codeReader = null;
@@ -47,6 +50,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     );
   }
 
+  // フィルタのイベント
   document.querySelectorAll(".filter-pill").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       const targetId = btn.getAttribute("data-target");
@@ -61,15 +65,14 @@ window.addEventListener("DOMContentLoaded", async () => {
     notifyChange();
   });
 
+  // ライブラリ初期化 (高速化設定)
   if (typeof ZXing !== "undefined") {
-    // ▼▼▼ 高速化設定: JANコード(EAN_13)のみに絞るヒントを作成 ▼▼▼
     const hints = new Map();
-    // EAN_13 = JANコードです
+    // JANコード(EAN_13)のみに絞ることで高速化
     hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
       ZXing.BarcodeFormat.EAN_13,
     ]);
 
-    // ヒントを渡してインスタンス化
     codeReader = new ZXing.BrowserMultiFormatReader(hints);
     console.log("ZXing library initialized with EAN_13 only");
   } else {
@@ -112,6 +115,8 @@ window.removeSlot = function (id) {
   if (group) {
     group.items.forEach((item) => {
       if (itemCounts[item.jan]) delete itemCounts[item.jan];
+      // 削除時はスキャンフラグも消す
+      if (scannedJanCodes.has(item.jan)) scannedJanCodes.delete(item.jan);
     });
   }
 
@@ -134,6 +139,12 @@ window.updateItemCount = function (groupId, jan, delta) {
   const next = current + delta;
   if (next < 0) return;
   itemCounts[jan] = next;
+
+  // 個数が0になったらスキャンフラグを消す
+  if (next === 0) {
+    scannedJanCodes.delete(jan);
+  }
+
   if (next > 0) {
     userExcludedIds.delete(groupId);
   }
@@ -145,14 +156,18 @@ window.resetGroupItemCounts = function (groupId) {
   if (group) {
     group.items.forEach((item) => {
       if (itemCounts[item.jan]) delete itemCounts[item.jan];
+      // スキャンフラグも消す
+      scannedJanCodes.delete(item.jan);
     });
   }
   recalculateAndRender();
 };
 
+// --- 再計算ロジック ---
 function recalculateAndRender() {
   const balance = parseInt(balanceInput.value, 10) || 0;
 
+  // 残高0でも計算を実行できるように修正済み
   if (!isDataLoaded) {
     updateCurrentView(0, 0);
     return;
@@ -205,6 +220,8 @@ if (resetExcludedButton) {
     itemCounts = {};
     lockedGroupIds.clear();
     currentSuggestion = [];
+    scannedJanCodes.clear(); // スキャン記録もリセット
+
     updateCurrentView(0, 0);
     resultArea.innerHTML =
       '<div class="empty-state">リセットしました。<br>「提案」ボタンを押してランチを決めましょう！</div>';
@@ -232,6 +249,7 @@ function updateCurrentView(calculatedTotal, balance) {
     }
   });
 
+  // ui.jsへスキャン済みリスト(scannedJanCodes)を渡す
   renderResults(
     uniqueGroups,
     balance,
@@ -239,12 +257,13 @@ function updateCurrentView(calculatedTotal, balance) {
     itemCounts,
     lockedGroupIds,
     calculatedTotal,
-    openGroupIds
+    openGroupIds,
+    scannedJanCodes
   );
 }
 
 // ---------------------------------------------------------
-// ▼▼▼ カメラ機能の実装 (高速化設定済み) ▼▼▼
+// ▼▼▼ カメラ機能の実装 ▼▼▼
 // ---------------------------------------------------------
 
 if (scanBtn) {
@@ -311,12 +330,15 @@ function handleJanScanSuccess(scannedJan) {
 
   if (!foundItem) {
     console.warn(`JAN not found: ${scannedJan}`);
-    showToast("メニューに見つかりません", "error");
+    showOverlayMessage("見つかりません", "error");
     return;
   }
 
   const currentCount = itemCounts[scannedJan] || 0;
   itemCounts[scannedJan] = currentCount + 1;
+
+  // スキャン済みとして記録
+  scannedJanCodes.add(scannedJan);
 
   if (userExcludedIds.has(targetGroupId)) {
     userExcludedIds.delete(targetGroupId);
@@ -325,20 +347,26 @@ function handleJanScanSuccess(scannedJan) {
   recalculateAndRender();
   clearNotification();
 
-  // ▼▼▼ トースト通知を表示 ▼▼▼
-  showToast(`${foundItem.name} を追加しました`);
+  // カメラ枠内にメッセージを表示
+  showOverlayMessage(foundItem.name);
 }
 
-// ▼▼▼ トースト表示関数 ▼▼▼
-function showToast(message, type = "success") {
-  const toast = document.getElementById("toast");
-  if (!toast) return;
+// カメラ枠内オーバーレイ表示関数
+function showOverlayMessage(message, type = "success") {
+  const overlay = document.getElementById("scanOverlay");
+  if (!overlay) return;
 
-  toast.textContent = message;
-  toast.className = `toast show ${type}`; // typeによって色を変えることも可能
+  overlay.textContent = message;
 
-  // 3秒後に消える
+  if (type === "error") {
+    overlay.style.backgroundColor = "rgba(255, 0, 0, 0.6)";
+  } else {
+    overlay.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+  }
+
+  overlay.classList.add("show");
+
   setTimeout(() => {
-    toast.className = toast.className.replace("show", "");
-  }, 2500);
+    overlay.classList.remove("show");
+  }, 800);
 }
