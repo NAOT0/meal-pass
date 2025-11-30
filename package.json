@@ -2,10 +2,11 @@
   "name": "meal-pass-app",
   "version": "1.0.0",
   "dependencies": {
-    "firebase": "^9.22.0",
-    "@zxing/library": "..."
+    "@zxing/library": "...",
+    "firebase": "^9.22.0"
   },
   "devDependencies": {
+    "@parcel/transformer-webmanifest": "^2.16.1",
     "parcel": "^2.10.3"
   },
   "scripts": {
